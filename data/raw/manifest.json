@@ -1,0 +1,138 @@
+{
+  "ANGL": {
+    "fetched_utc": "2026-11-07T21:01:35Z",
+    "file": "ANGL.csv",
+    "first": "2012-04-11",
+    "last": "2026-11-06",
+    "rows": 3666,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "BND": {
+    "fetched_utc": "2026-11-07T21:01:37Z",
+    "file": "BND.csv",
+    "first": "2007-04-10",
+    "last": "2026-11-06",
+    "rows": 4928,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "FLTR": {
+    "fetched_utc": "2026-11-07T21:01:35Z",
+    "file": "FLTR.csv",
+    "first": "2011-04-26",
+    "last": "2026-11-06",
+    "rows": 3908,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "GDX": {
+    "fetched_utc": "2026-11-07T21:01:34Z",
+    "file": "GDX.csv",
+    "first": "2006-05-22",
+    "last": "2026-11-06",
+    "rows": 5149,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "HAP": {
+    "fetched_utc": "2026-11-07T21:01:35Z",
+    "file": "HAP.csv",
+    "first": "2008-11-11",
+    "last": "2026-11-06",
+    "rows": 4525,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "MOAT": {
+    "fetched_utc": "2026-11-07T21:01:34Z",
+    "file": "MOAT.csv",
+    "first": "2012-04-25",
+    "last": "2026-11-06",
+    "rows": 3656,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "OUNZ": {
+    "fetched_utc": "2026-11-07T21:01:36Z",
+    "file": "OUNZ.csv",
+    "first": "2014-05-16",
+    "last": "2026-11-06",
+    "rows": 3139,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "PFXF": {
+    "fetched_utc": "2026-11-07T21:01:36Z",
+    "file": "PFXF.csv",
+    "first": "2012-07-19",
+    "last": "2026-11-06",
+    "rows": 3597,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "REMX": {
+    "fetched_utc": "2026-11-07T21:01:35Z",
+    "file": "REMX.csv",
+    "first": "2010-10-28",
+    "last": "2026-11-06",
+    "rows": 4031,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "SMH": {
+    "fetched_utc": "2026-11-07T21:01:34Z",
+    "file": "SMH.csv",
+    "first": "2000-06-05",
+    "last": "2026-11-06",
+    "rows": 6647,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "SPY": {
+    "fetched_utc": "2026-11-07T21:01:37Z",
+    "file": "SPY.csv",
+    "first": "1993-01-29",
+    "last": "2026-11-06",
+    "rows": 8502,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "VGIT": {
+    "fetched_utc": "2026-11-07T21:01:37Z",
+    "file": "VGIT.csv",
+    "first": "2009-11-23",
+    "last": "2026-11-06",
+    "rows": 4265,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "^GSPC": {
+    "fetched_utc": "2026-11-07T21:01:38Z",
+    "file": "IDX_GSPC.csv",
+    "first": "1927-12-30",
+    "last": "2026-11-06",
+    "rows": 24831,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "^IRX": {
+    "fetched_utc": "2026-11-07T21:01:39Z",
+    "file": "IDX_IRX.csv",
+    "first": "1960-01-04",
+    "last": "2026-11-06",
+    "rows": 16698,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "^SPGSCI": {
+    "fetched_utc": "2026-11-07T21:01:40Z",
+    "file": "IDX_SPGSCI.csv",
+    "first": "1984-01-03",
+    "last": "2026-11-06",
+    "rows": 10796,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "^TNX": {
+    "fetched_utc": "2026-11-07T21:01:39Z",
+    "file": "IDX_TNX.csv",
+    "first": "1962-01-02",
+    "last": "2026-11-06",
+    "rows": 16201,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "^VIX": {
+    "fetched_utc": "2026-11-07T21:01:38Z",
+    "file": "IDX_VIX.csv",
+    "first": "1990-01-02",
+    "last": "2026-11-06",
+    "rows": 9283,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  }
+}

@@ -1,0 +1,4 @@
+,value,threshold,ok
+avg_pairwise_corr < 0.75,0.391,0.75,True
+n_themes >= 5 (rho cut 0.60),5,5,True
+no pair > 0.95,0.775,0.95,True
