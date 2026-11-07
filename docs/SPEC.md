@@ -152,3 +152,36 @@ The CLI stops at a failed gate; `--force` continues and labels later phases "inf
 | "T-test on annual returns across 5 OOS years" | 7 full OOS years (2018-2024) | Data permits more |
 | Rebalance uses data "as of market close on rebalance date" and "Jan 2021 rebalance uses only data through Dec 2020" | Signal on prior close, execution at the rebalance-day close | The only reading consistent with both statements |
 | Bid-ask pulled from brokers | Tiered table by dollar volume with an override file | No broker quote feed available in this environment; the override path is the plan's intended input |
+
+## 13. Operational limits (pre-registered, `vaneck/risk.py` and `vaneck/health.py`)
+
+These govern the paper/live decision pipeline, not the research results.
+
+| Risk control | Limit | Breach |
+|---|---|---|
+| long only | weights >= 0 | block |
+| per-position cap | 15% for equal weight, 20% for rules, 40%/60% for the 60/40 benchmarks | block |
+| gross exposure | <= 100% | block |
+| one-way turnover per rebalance | <= 75% of equity | block |
+| participation | order notional <= 10% of trailing 60-day dollar volume | scale down, warn |
+| minimum order | >= $500 | drop |
+| cash after trades and estimated costs | >= 0 | block |
+| signal staleness | <= 5 calendar days | block |
+| drawdown halt | book drawdown > -25% from peak | otherwise buys removed, sells kept |
+| cost reserve | 10 bps of equity withheld from targets | - |
+
+| Health check | Block | Warn |
+|---|---|---|
+| latest bar present for every tradeable | missing | - |
+| NaNs in the last 5 rows | any | - |
+| adjustment-factor break in the last 60 rows | any | - |
+| macro sanity (no NaN; VIX in [5, 150]; 10y in [0, 25]) | outside | - |
+| age of the last bar | > 10 days | > 5 days |
+| daily move in the last 5 rows | - | > 25% |
+| zero volume on the last bar | - | any |
+| raw cache age | - | > 3 days |
+| signal history per fund | < 61 bars | - |
+
+Monitoring tolerance: paper book versus research engine fed the executed
+weights must agree within 1% cumulative per year; the same tolerance applied
+to the intended targets flags an implementation gap rather than an engine fault.

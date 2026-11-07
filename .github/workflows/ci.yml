@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -r requirements.txt ruff
+      - name: lint
+        run: ruff check vaneck tests
+      - name: unit tests (incl. lookahead and reconciliation)
+        run: python -m pytest -q
+      - name: deterministic dry-run decision on the committed data cache
+        run: |
+          python -m vaneck rebalance --strategy EqualWeight --as-of 2024-12-31 \
+            --init-cash 10000000 --book /tmp/ci/book.json --decisions /tmp/ci/decisions
+      - name: paper replay and monitor (informational)
+        continue-on-error: true
+        run: |
+          python -m vaneck replay --strategy EqualWeight --start 2024-07-01 --end 2024-12-31 \
+            --book /tmp/ci/replay.json --decisions /tmp/ci/replay_decisions --out /tmp/ci/out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: decisions-${{ matrix.python-version }}
+          path: /tmp/ci
+          if-no-files-found: ignore

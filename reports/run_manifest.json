@@ -1,0 +1,33 @@
+{
+  "run_id": "20261107T225955Z-06d90e",
+  "created_utc": "2026-11-07T22:59:55Z",
+  "command": "all",
+  "argv": [
+    "all",
+    "--force"
+  ],
+  "git": {
+    "sha": "7e4ff7118a60b30929f432f66fb5573d4c9f9f12",
+    "dirty": true,
+    "branch": "claude/dazzling-dirac-6vvbh2"
+  },
+  "config_hash": "0b9048a66047e9e3",
+  "data_hash": "2b04507c506df358",
+  "versions": {
+    "python": "3.13.18",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "yfinance": "1.8.0",
+    "matplotlib": "3.11.2"
+  },
+  "gates": {
+    "oos_start": "2017-06-01",
+    "oos_end": "2024-12-31",
+    "n_rebalances": 91,
+    "gate0": true,
+    "gate1": false,
+    "gate2": false,
+    "gate2_winners": []
+  }
+}

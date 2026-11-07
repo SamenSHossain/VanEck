@@ -1,0 +1,15 @@
+{
+  "name": "paper",
+  "created": "2026-11-06",
+  "as_of": "2026-11-06",
+  "initial_cash": 10000000.0,
+  "cash": 10000000.0,
+  "positions": {},
+  "fills": [],
+  "cash_flows": [],
+  "marks": {
+    "2026-11-06": 10000000.0
+  },
+  "peak_equity": 10000000.0,
+  "data_vintage": "2026-11-06"
+}

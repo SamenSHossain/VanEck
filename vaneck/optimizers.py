@@ -55,16 +55,20 @@ def optimize(objective: str, cov: pd.DataFrame, mu: pd.Series | None,
     if not free or budget <= 1e-12:
         return pd.Series(w_pin, index=tickers)
 
-    lo = np.array([bounds[t][0] for t in free]); hi = np.array([bounds[t][1] for t in free])
+    lo = np.array([bounds[t][0] for t in free])
+    hi = np.array([bounds[t][1] for t in free])
     lo, hi = _feasible_bounds(lo, hi, budget)
     span = np.maximum(hi - lo, 0.0)
     x0 = lo + (budget - lo.sum()) * (span / span.sum() if span.sum() > 0 else 0.0)
 
     def full(x: np.ndarray) -> np.ndarray:
-        w = w_pin.copy(); w[idx_free] = x; return w
+        w = w_pin.copy()
+        w[idx_free] = x
+        return w
 
     def var(x):
-        w = full(x); return float(w @ sigma @ w)
+        w = full(x)
+        return float(w @ sigma @ w)
 
     def var_grad(x):
         return (2.0 * sigma @ full(x))[idx_free]
@@ -83,14 +87,18 @@ def optimize(objective: str, cov: pd.DataFrame, mu: pd.Series | None,
         m = mu.reindex(tickers).to_numpy()
         # Best achievable linear return inside the box: greedy fill by mu.
         order = np.argsort(-m[idx_free])
-        x_lin = lo.copy(); rem = budget - lo.sum()
+        x_lin = lo.copy()
+        rem = budget - lo.sum()
         for k in order:
-            add = min(hi[k] - lo[k], rem); x_lin[k] += add; rem -= add
+            add = min(hi[k] - lo[k], rem)
+            x_lin[k] += add
+            rem -= add
         if float(m @ full(x_lin)) <= 0.0:
             x = x_mv  # no fund has positive expected excess return -> risk-minimizing fallback
         else:
             def neg_sharpe(x):
-                w = full(x); v = w @ sigma @ w
+                w = full(x)
+                v = w @ sigma @ w
                 return -float(m @ w) / np.sqrt(v) if v > 0 else 0.0
             best = None
             for start in (x0, x_mv, x_lin):

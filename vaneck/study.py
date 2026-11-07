@@ -100,9 +100,11 @@ def gate1(runs: dict[str, Run], spec: Spec = SPEC) -> pd.DataFrame:
         "EW max drawdown not worse than %.0f%%" % (100 * spec.gate1_mdd_floor): dict(
             value=ew.mdd_post, threshold=spec.gate1_mdd_floor, ok=bool(ew.mdd_post > spec.gate1_mdd_floor), decisive=True),
         "EW one-way turnover < %.0f%%/yr" % (100 * spec.gate1_turnover_max): dict(
-            value=ew.turnover_pre, threshold=spec.gate1_turnover_max, ok=bool(ew.turnover_pre < spec.gate1_turnover_max), decisive=True),
+            value=ew.turnover_pre, threshold=spec.gate1_turnover_max,
+            ok=bool(ew.turnover_pre < spec.gate1_turnover_max), decisive=True),
         "EW post-tax Sharpe >= %.2f" % spec.gate1_posttax_sharpe_min: dict(
-            value=ew.sharpe_post, threshold=spec.gate1_posttax_sharpe_min, ok=bool(ew.sharpe_post >= spec.gate1_posttax_sharpe_min), decisive=True),
+            value=ew.sharpe_post, threshold=spec.gate1_posttax_sharpe_min,
+            ok=bool(ew.sharpe_post >= spec.gate1_posttax_sharpe_min), decisive=True),
         "Tax model matters: |Sharpe haircut| > 20%": dict(
             value=abs(ew.sharpe_tax_haircut), threshold=0.20, ok=bool(abs(ew.sharpe_tax_haircut) > 0.20), decisive=False),
     }
@@ -175,7 +177,8 @@ def gate3(regime_tbls: dict[str, pd.DataFrame], winners: list[str], ew_name: str
                 "strategy": name, "regime": reg, "days": int(t.loc[reg, "days"]),
                 "strategy_sharpe": t.loc[reg, "sharpe"], "ew_sharpe": ew.loc[reg, "sharpe"],
                 "strategy_mdd": t.loc[reg, "mdd_concat"], "ew_mdd": ew.loc[reg, "mdd_concat"],
-                "mdd_within_tolerance": bool(t.loc[reg, "mdd_concat"] >= ew.loc[reg, "mdd_concat"] - spec.gate3_crisis_mdd_tolerance),
+                "mdd_within_tolerance": bool(t.loc[reg, "mdd_concat"]
+                                             >= ew.loc[reg, "mdd_concat"] - spec.gate3_crisis_mdd_tolerance),
                 "reduces_drawdown_vs_ew": bool(t.loc[reg, "mdd_concat"] > ew.loc[reg, "mdd_concat"]),
             })
     return pd.DataFrame(rows)
@@ -197,12 +200,14 @@ def sensitivities(md: MarketData, splits: list[Split], spec: Spec = SPEC) -> pd.
         cm = CostModel(sp)
         for bname, fn in (("EqualWeight", equal_weight), (PRIMARY_BENCHMARK, BASELINES[PRIMARY_BENCHMARK])):
             r = run_fn(md, splits, fn, bname, "sensitivity", sp, cm, sp.study_end)
-            s = r.summary(); s["variant"] = label
+            s = r.summary()
+            s["variant"] = label
             rows.append(s)
     # quarterly rebalancing of equal weight (turnover criterion sensitivity)
     q_splits = [s for s in splits if s.exec_date.month in (1, 4, 7, 10)]
     r = run_fn(md, q_splits, equal_weight, "EqualWeight", "sensitivity", spec, CostModel(spec), spec.study_end)
-    s = r.summary(); s["variant"] = "quarterly rebalance"
+    s = r.summary()
+    s["variant"] = "quarterly rebalance"
     rows.append(s)
     return pd.DataFrame(rows).set_index(["variant", "name"])
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from .calendar import Split
-from .config import EQUITY_FUNDS, SPEC, UNIVERSE, Spec
+from .config import EQUITY_FUNDS, SPEC, UNIVERSE
 from .data import MarketData
 
 

@@ -96,7 +96,9 @@ def simulate(md: MarketData, targets: pd.DataFrame, spec: Spec = SPEC, taxed: bo
     ledger = TaxLedger(spec, taxed=taxed)
     units = np.zeros(n)
     cash = initial
-    nav = np.empty(n_days); gross = np.empty(n_days); cash_arr = np.empty(n_days)
+    nav = np.empty(n_days)
+    gross = np.empty(n_days)
+    cash_arr = np.empty(n_days)
     weights = np.zeros((n_days, n))
     trades, costs, turnover, taxes_paid = {}, {}, {}, {}
     last_settled_year: int | None = None

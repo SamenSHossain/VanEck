@@ -24,3 +24,12 @@ packages = ["vaneck"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["data", "reports", "paper"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B006"]
+ignore = ["E731", "E741"]

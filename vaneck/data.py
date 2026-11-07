@@ -120,6 +120,7 @@ class MarketData:
     volume: pd.DataFrame
     distributions: pd.DataFrame
     macro: pd.DataFrame
+    splits: pd.DataFrame | None = None   # split ratio on the split date (e.g. 2.0), else 0
 
     # -- lookahead guard ---------------------------------------------------- #
     def window(self, end: pd.Timestamp | str, start: pd.Timestamp | str | None = None) -> "MarketData":
@@ -133,6 +134,7 @@ class MarketData:
             volume=self.volume.loc[sl],
             distributions=self.distributions.loc[sl],
             macro=self.macro.loc[sl],
+            splits=None if self.splits is None else self.splits.loc[sl],
         )
 
     @property
@@ -162,7 +164,8 @@ class MarketData:
     def subset(self, tickers: list[str]) -> "MarketData":
         cols = list(tickers)
         return replace(self, adj_close=self.adj_close[cols], close=self.close[cols],
-                       volume=self.volume[cols], distributions=self.distributions[cols])
+                       volume=self.volume[cols], distributions=self.distributions[cols],
+                       splits=None if self.splits is None else self.splits[cols])
 
 
 def build_market_data(spec: Spec = SPEC, raw_dir: Path = RAW_DIR,
@@ -195,8 +198,9 @@ def build_market_data(spec: Spec = SPEC, raw_dir: Path = RAW_DIR,
         close.loc[mask, t] = close.loc[mask, t].ffill()
 
     macro = pd.DataFrame({k: v["Close"] for k, v in macro_raw.items()}).reindex(cal).ffill()
+    splits = _col("Stock Splits", fill_zero=True)
     return MarketData(adj_close=adj_close, close=close, volume=volume,
-                      distributions=dist, macro=macro)
+                      distributions=dist, macro=macro, splits=splits)
 
 
 # --------------------------------------------------------------------------- #
@@ -258,10 +262,11 @@ def make_synthetic(n_days: int = 2000, tickers: list[str] | None = None, seed: i
     q_end = idx[idx.is_quarter_end | (idx.to_period("Q") != idx.shift(1, "B").to_period("Q"))]
     for d in q_end:
         dist.loc[d] = close.loc[d] * div_yield / 4.0
-    # Unadjusted close: price drops by the distribution; adj reinvests it.
-    # Build close so that Adj/Close ratio is monotone increasing (like Yahoo).
-    factor = (1.0 - dist / close).cumprod()
-    close = adj / factor.shift(1).fillna(1.0)
+    # Unadjusted close: Yahoo's Adj Close = Close x prod_{s>t}(1 - div_s / close_{s-1}),
+    # so the Adj/Close ratio is <= 1 and non-decreasing through time (equal to 1 on the last bar).
+    f = (1.0 - dist / adj).cumprod()
+    ratio = f.iloc[-1] / f
+    close = adj / ratio
     volume = pd.DataFrame(rng.integers(50_000, 5_000_000, size=(n_days, n)), index=idx, columns=tickers).astype(float)
     spx = 1000.0 * np.cumprod(1.0 + rng.normal(0.0004, 0.011, n_days))
     vix = np.clip(18.0 + 6.0 * np.cumsum(rng.normal(0, 0.1, n_days)) % 12.0, 9.0, 60.0)
@@ -272,4 +277,5 @@ def make_synthetic(n_days: int = 2000, tickers: list[str] | None = None, seed: i
         "irx": np.clip(1.5 + np.cumsum(rng.normal(0, 0.02, n_days)), 0.0, 5.5),
         "crb": 300.0 * np.cumprod(1.0 + rng.normal(0.0001, 0.009, n_days)),
     }, index=idx)
-    return MarketData(adj_close=adj, close=close, volume=volume, distributions=dist, macro=macro)
+    splits = pd.DataFrame(0.0, index=idx, columns=tickers)
+    return MarketData(adj_close=adj, close=close, volume=volume, distributions=dist, macro=macro, splits=splits)

@@ -1,0 +1,52 @@
+{
+  "strategy": "EqualWeight",
+  "as_of": "2024-12-31",
+  "n_days": 253,
+  "decisions": {
+    "submitted": 12
+  },
+  "realized": {
+    "total_return": 0.09576606602854532,
+    "cagr": 0.09501745587185284,
+    "ann_vol": 0.11612583492485248,
+    "sharpe": 0.4190073539707529,
+    "max_drawdown": -0.06919029768465579,
+    "current_drawdown": -0.06443685448104619,
+    "turnover_one_way_per_year": 0.22965232674102343,
+    "costs_dollars": 8355.05924790635,
+    "costs_bps_per_year": 7.674968590724485,
+    "dividends_received": 319954.652
+  },
+  "reconciliation": {
+    "tolerance": 0.010075290896646131,
+    "paper_total_return": 0.09576606602854532,
+    "research_executed_total_return": 0.09598962216231555,
+    "cumulative_difference_vs_executed": 4.1025262308647115e-05,
+    "tracking_error_ann_vs_executed": 0.000138801020503886,
+    "research_executed_costs_dollars": 8334.420410049435,
+    "research_intended_total_return": 0.08348553891849031,
+    "cumulative_difference_vs_intended": 0.012545108506133884,
+    "tracking_error_ann_vs_intended": 0.01017827174308993,
+    "research_intended_costs_dollars": 8971.514092427466,
+    "paper_costs_dollars": 8355.05924790635
+  },
+  "participation_scaled_rebalances": [
+    "2023-12-29",
+    "2024-01-31",
+    "2024-02-29",
+    "2024-03-28",
+    "2024-04-30",
+    "2024-05-31",
+    "2024-06-28",
+    "2024-07-31",
+    "2024-08-30",
+    "2024-09-30",
+    "2024-10-31",
+    "2024-11-29"
+  ],
+  "days_since_last_decision": 32,
+  "alerts": [
+    "implementation gap vs intended targets +1.25% exceeds 1.01%: risk controls or fills are moving the book away from the research portfolio"
+  ],
+  "status": "alert"
+}

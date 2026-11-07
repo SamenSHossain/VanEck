@@ -6,7 +6,7 @@ violation; record such changes (and why) in docs/SPEC.md.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -5,7 +5,7 @@ import pytest
 from vaneck import metrics, portfolio
 from vaneck.baselines import buy_and_hold_targets, equal_weight
 from vaneck.calendar import walk_forward_splits
-from vaneck.config import AUX_TICKERS, SPEC, UNIVERSE, Spec
+from vaneck.config import AUX_TICKERS, UNIVERSE, Spec
 from vaneck.costs import CostModel
 
 

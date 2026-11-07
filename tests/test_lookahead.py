@@ -6,14 +6,16 @@ import pytest
 from vaneck import portfolio, strategies
 from vaneck.baselines import equal_weight
 from vaneck.calendar import walk_forward_splits
-from vaneck.config import AUX_TICKERS, SPEC, UNIVERSE
-from vaneck.data import MarketData, make_synthetic
+from vaneck.config import AUX_TICKERS, UNIVERSE
+from vaneck.data import MarketData
 
 
 def _perturb_future(md: MarketData, after: pd.Timestamp, seed: int = 1) -> MarketData:
     rng = np.random.default_rng(seed)
     mask = md.index > after
-    adj = md.adj_close.copy(); close = md.close.copy(); macro = md.macro.copy()
+    adj = md.adj_close.copy()
+    close = md.close.copy()
+    macro = md.macro.copy()
     noise = np.exp(rng.normal(0, 0.05, size=(mask.sum(), adj.shape[1])))
     adj.loc[mask] = adj.loc[mask].to_numpy() * noise
     close.loc[mask] = close.loc[mask].to_numpy() * noise

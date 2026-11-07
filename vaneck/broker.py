@@ -1,0 +1,199 @@
+"""Execution layer: a ``Broker`` protocol and a paper broker with a share-based book.
+
+The paper book is deliberately *not* the research simulator: it holds whole
+shares and cash, receives dividends as cash on the ex-date, applies splits, and
+fills at the close of the execution date with the cost model's slippage. The
+monitor reconciles it against the research engine; the two agreeing is an
+engineering check, not a given.
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Protocol
+
+import numpy as np
+import pandas as pd
+
+from .config import SPEC, Spec
+from .costs import CostModel
+from .data import MarketData
+from .risk import Order
+
+
+@dataclass
+class Fill:
+    date: str
+    ticker: str
+    side: str
+    shares: float
+    price: float
+    notional: float
+    cost: float
+
+
+class Broker(Protocol):
+    def positions(self) -> dict[str, float]: ...
+    def cash(self) -> float: ...
+    def equity(self, date=None) -> float: ...
+    def submit(self, orders: list[Order], date) -> list[Fill]: ...
+
+
+class PaperBroker:
+    def __init__(self, path: Path, md: MarketData, cost_model: CostModel | None = None, spec: Spec = SPEC):
+        self.path = Path(path)
+        self.md = md
+        self.spec = spec
+        self.cost_model = cost_model or CostModel(spec)
+        self.book: dict | None = json.loads(self.path.read_text()) if self.path.exists() else None
+        self._adv = None
+
+    # -- lifecycle ------------------------------------------------------------ #
+    @property
+    def initialized(self) -> bool:
+        return self.book is not None
+
+    def init(self, cash: float, as_of, name: str = "paper", data_vintage: str | None = None) -> None:
+        as_of = pd.Timestamp(as_of)
+        if as_of not in self.md.index:
+            raise ValueError(f"{as_of.date()} is not a trading day in the data")
+        self.book = {
+            "name": name, "created": str(as_of.date()), "as_of": str(as_of.date()),
+            "initial_cash": float(cash), "cash": float(cash), "positions": {},
+            "fills": [], "cash_flows": [], "marks": {str(as_of.date()): float(cash)},
+            "peak_equity": float(cash),
+            "data_vintage": data_vintage or str(self.md.index[-1].date()),
+        }
+        self.save()
+
+    def save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(self.book, indent=2, default=str))
+
+    def _require(self) -> dict:
+        if self.book is None:
+            raise RuntimeError(f"paper book {self.path} not initialised (run `paper init`)")
+        return self.book
+
+    # -- state ------------------------------------------------------------------ #
+    def positions(self) -> dict[str, float]:
+        return {k: float(v) for k, v in self._require()["positions"].items() if abs(v) > 1e-12}
+
+    def cash(self) -> float:
+        return float(self._require()["cash"])
+
+    @property
+    def as_of(self) -> pd.Timestamp:
+        return pd.Timestamp(self._require()["as_of"])
+
+    def prices(self, date=None) -> pd.Series:
+        date = self.as_of if date is None else pd.Timestamp(date)
+        return self.md.close.loc[date]
+
+    def equity(self, date=None) -> float:
+        px = self.prices(date)
+        return self.cash() + sum(sh * float(px[t]) for t, sh in self.positions().items())
+
+    def weights(self, date=None) -> pd.Series:
+        px = self.prices(date)
+        eq = self.equity(date)
+        w = pd.Series({t: sh * float(px[t]) / eq for t, sh in self.positions().items()}, dtype=float)
+        w["CASH"] = self.cash() / eq
+        return w
+
+    def equity_curve(self) -> pd.Series:
+        marks = self._require()["marks"]
+        s = pd.Series({pd.Timestamp(k): float(v) for k, v in marks.items()}).sort_index()
+        return s.rename("paper_equity")
+
+    def drawdown(self) -> float:
+        b = self._require()
+        return self.equity() / float(b["peak_equity"]) - 1.0 if b["peak_equity"] > 0 else 0.0
+
+    def fills(self) -> pd.DataFrame:
+        f = self._require()["fills"]
+        return pd.DataFrame(f) if f else pd.DataFrame(columns=[x for x in Fill.__dataclass_fields__])
+
+    def realized_costs(self) -> float:
+        return float(sum(f["cost"] for f in self._require()["fills"]))
+
+    # -- time ------------------------------------------------------------------- #
+    def advance_to(self, date) -> None:
+        """Roll the book through cash yield, dividends and splits up to ``date`` inclusive."""
+        b = self._require()
+        date = pd.Timestamp(date)
+        start = self.as_of
+        if date <= start:
+            return
+        days = self.md.index[(self.md.index > start) & (self.md.index <= date)]
+        y = self.md.cash_yield(self.spec)
+        vintage = pd.Timestamp(b["data_vintage"])
+        pos = b["positions"]
+        for d in days:
+            prev = self.md.index[self.md.index.get_loc(d) - 1]
+            b["cash"] *= 1.0 + float(y.loc[prev]) / 252.0
+            for t in list(pos):
+                sh = pos[t]
+                if sh == 0:
+                    continue
+                div = float(self.md.distributions.at[d, t]) if t in self.md.distributions.columns else 0.0
+                if div > 0:
+                    amt = sh * div
+                    b["cash"] += amt
+                    b["cash_flows"].append({"date": str(d.date()), "ticker": t, "type": "dividend", "amount": amt})
+                if self.md.splits is not None and d > vintage:
+                    r = float(self.md.splits.at[d, t]) if t in self.md.splits.columns else 0.0
+                    if r > 0:
+                        pos[t] = sh * r
+                        b["cash_flows"].append({"date": str(d.date()), "ticker": t, "type": "split", "ratio": r})
+            b["as_of"] = str(d.date())
+            eq = self.equity(d)
+            b["marks"][str(d.date())] = eq
+            b["peak_equity"] = max(float(b["peak_equity"]), eq)
+        self.save()
+
+    # -- execution ------------------------------------------------------------- #
+    def submit(self, orders: list[Order], date) -> list[Fill]:
+        """Fill ``orders`` at the close of ``date`` (a trading day in the data)."""
+        b = self._require()
+        date = pd.Timestamp(date)
+        if date not in self.md.index:
+            raise ValueError(f"no bar for execution date {date.date()}")
+        if date < self.as_of:
+            raise ValueError("cannot execute before the book's as_of date")
+        self.advance_to(date)
+        if self._adv is None:
+            self._adv = self.cost_model.adv_table(self.md)
+        adv_row = self._adv.loc[date]
+        px = self.md.close.loc[date]
+        fills: list[Fill] = []
+        pos = b["positions"]
+        for o in sorted(orders, key=lambda o: o.side != "SELL"):
+            price = float(px[o.ticker])
+            if not np.isfinite(price) or price <= 0:
+                raise ValueError(f"no price for {o.ticker} on {date.date()}")
+            shares = o.shares
+            if o.side == "SELL":
+                shares = min(shares, pos.get(o.ticker, 0.0))
+                if shares <= 0:
+                    continue
+            notional = shares * price
+            cost = self.cost_model.trade_cost(o.ticker, notional, float(adv_row.get(o.ticker, np.nan)))
+            if o.side == "BUY":
+                b["cash"] -= notional + cost
+                pos[o.ticker] = pos.get(o.ticker, 0.0) + shares
+            else:
+                b["cash"] += notional - cost
+                pos[o.ticker] = pos.get(o.ticker, 0.0) - shares
+                if abs(pos[o.ticker]) < 1e-9:
+                    del pos[o.ticker]
+            f = Fill(date=str(date.date()), ticker=o.ticker, side=o.side, shares=shares, price=price,
+                     notional=notional, cost=cost)
+            fills.append(f)
+            b["fills"].append(asdict(f))
+        eq = self.equity(date)
+        b["marks"][str(date.date())] = eq
+        b["peak_equity"] = max(float(b["peak_equity"]), eq)
+        self.save()
+        return fills

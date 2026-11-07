@@ -35,7 +35,8 @@ def monthly_test(nav_x: pd.Series, nav_y: pd.Series) -> dict:
 def bootstrap_sharpe_diff(nav_x: pd.Series, nav_y: pd.Series, rf: pd.Series, n_boot: int = 2000,
                           block: int = 21, seed: int = 0) -> dict:
     """Paired moving-block bootstrap of the annualized Sharpe difference (one-sided p)."""
-    ex = excess_returns(nav_x, rf); ey = excess_returns(nav_y, rf).reindex(ex.index)
+    ex = excess_returns(nav_x, rf)
+    ey = excess_returns(nav_y, rf).reindex(ex.index)
     ex, ey = ex.to_numpy(), ey.to_numpy()
     n = len(ex)
     rng = np.random.default_rng(seed)

@@ -85,7 +85,8 @@ def style(ax, grid_axis="y"):
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     for s in ("left", "bottom"):
-        ax.spines[s].set_color(AXIS); ax.spines[s].set_linewidth(1)
+        ax.spines[s].set_color(AXIS)
+        ax.spines[s].set_linewidth(1)
     ax.grid(axis=grid_axis, color=GRID, linewidth=1, linestyle="-")
     ax.set_axisbelow(True)
     ax.tick_params(length=0)
@@ -122,8 +123,10 @@ def fig_corr_heatmap(corr: pd.DataFrame, path: Path, title: str):
     cmap = ListedColormap(SEQ_BLUE)
     im = ax.imshow(corr.values, cmap=cmap, vmin=0.0, vmax=1.0)
     n = len(corr)
-    ax.set_xticks(range(n)); ax.set_yticks(range(n))
-    ax.set_xticklabels(corr.columns, rotation=0); ax.set_yticklabels(corr.index)
+    ax.set_xticks(range(n))
+    ax.set_yticks(range(n))
+    ax.set_xticklabels(corr.columns, rotation=0)
+    ax.set_yticklabels(corr.index)
     for s in ax.spines.values():
         s.set_visible(False)
     ax.tick_params(length=0)
@@ -133,10 +136,13 @@ def fig_corr_heatmap(corr: pd.DataFrame, path: Path, title: str):
             ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=7.5,
                     color="#ffffff" if v > 0.55 else INK)
     cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03)
-    cb.outline.set_visible(False); cb.ax.tick_params(length=0, colors=MUTED)
+    cb.outline.set_visible(False)
+    cb.ax.tick_params(length=0, colors=MUTED)
     cb.set_label("daily-return correlation", color=INK2)
     ax.set_title(title, loc="left")
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def fig_rolling_corr(rolling_avg: pd.Series, threshold: float, path: Path, title: str):
@@ -149,9 +155,13 @@ def fig_rolling_corr(rolling_avg: pd.Series, threshold: float, path: Path, title
             markeredgecolor=SURFACE, markeredgewidth=2)
     ax.annotate(f"{last.iloc[-1]:.2f}", (last.index[-1], last.iloc[-1]), xytext=(6, 0),
                 textcoords="offset points", va="center", fontsize=8, color=INK2)
-    ax.set_ylim(0, 1); ax.set_ylabel("average pairwise correlation (60-day)")
-    _years(ax); ax.set_title(title, loc="left")
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("average pairwise correlation (60-day)")
+    _years(ax)
+    ax.set_title(title, loc="left")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def _end_label(ax, x, y, text, color=INK2):
@@ -172,7 +182,8 @@ def fig_nav(navs: dict[str, pd.Series], path: Path, title: str, emphasis: list[s
         idx = 100.0 * nav / nav.iloc[0]
         lo, hi = min(lo, idx.min()), max(hi, idx.max())
         if name in emphasis:
-            color = PALETTE[slot % len(PALETTE)]; slot += 1
+            color = PALETTE[slot % len(PALETTE)]
+            slot += 1
             ax.plot(idx.index, idx.values, color=color, linewidth=2, label=labels.get(name, name), zorder=3)
             ax.plot([idx.index[-1]], [idx.iloc[-1]], "o", color=color, markersize=8, markeredgecolor=SURFACE,
                     markeredgewidth=2, zorder=4)
@@ -188,7 +199,9 @@ def fig_nav(navs: dict[str, pd.Series], path: Path, title: str, emphasis: list[s
     ax.set_ylabel("growth of 100 (log scale)" if log else "growth of 100")
     _years(ax)
     _legend_above(ax, title, ncol=min(4, len(ax.get_legend_handles_labels()[0])))
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def fig_drawdown(navs: dict[str, pd.Series], path: Path, title: str, labels: dict[str, str] | None = None):
@@ -202,8 +215,11 @@ def fig_drawdown(navs: dict[str, pd.Series], path: Path, title: str, labels: dic
             ax.fill_between(dd.index, dd.values, 0, color=color, alpha=0.10, linewidth=0)
     ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
     ax.set_ylabel("drawdown from peak")
-    _years(ax); _legend_above(ax, title, ncol=3)
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    _years(ax)
+    _legend_above(ax, title, ncol=3)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def fig_sharpe_dumbbell(tbl: pd.DataFrame, path: Path, title: str):
@@ -218,11 +234,15 @@ def fig_sharpe_dumbbell(tbl: pd.DataFrame, path: Path, title: str):
     ax.scatter(tbl.sharpe_post, y, s=70, color=PALETTE[0], edgecolor=SURFACE, linewidth=2, zorder=4, label="post-tax")
     for i, v in enumerate(tbl.sharpe_post):
         ax.annotate(f"{v:.2f}", (v, i), xytext=(0, -11), textcoords="offset points", ha="center", fontsize=7.5, color=INK2)
-    ax.set_yticks(y); ax.set_yticklabels(tbl.index)
+    ax.set_yticks(y)
+    ax.set_yticklabels(tbl.index)
     ax.axvline(0, color=AXIS, linewidth=1)
     ax.set_xlabel("annualised Sharpe ratio (excess over 13-week T-bill)")
-    ax.set_title(title, loc="left"); ax.legend(loc="lower right")
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    ax.set_title(title, loc="left")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def fig_regimes(regimes: pd.Series, spx: pd.Series, path: Path, title: str):
@@ -239,13 +259,16 @@ def fig_regimes(regimes: pd.Series, spx: pd.Series, path: Path, title: str):
     ax.plot(s.index, s.values, color=INK2, linewidth=1.4)
     _log_ticks(ax, float(s.min()), float(s.max()), fmt="{:,.0f}")
     ax.set_ylabel("S&P 500 (log scale)")
-    _years(ax); ax.set_title(title, loc="left", pad=30)
+    _years(ax)
+    ax.set_title(title, loc="left", pad=30)
     order = [k for k in ("Bull", "Neutral", "Correction", "Crisis", "Stagflation") if k in seen]
     handles, labels_ = ax.get_legend_handles_labels()
     by = dict(zip(labels_, handles))
     ax.legend([by[k] for k in order], order, loc="lower left", bbox_to_anchor=(0.0, 1.0), ncol=len(order),
               borderaxespad=0.2, handlelength=1.6)
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def fig_annual_dots(annual: pd.DataFrame, path: Path, title: str, labels: dict[str, str] | None = None):
@@ -259,8 +282,11 @@ def fig_annual_dots(annual: pd.DataFrame, path: Path, title: str, labels: dict[s
         off = (j - (k - 1) / 2) * 0.18
         ax.plot(x + off, annual[col].values, "o", color=PALETTE[j % len(PALETTE)], markersize=9,
                 markeredgecolor=SURFACE, markeredgewidth=2, label=labels.get(col, col))
-    ax.set_xticks(x); ax.set_xticklabels([str(i) for i in annual.index])
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(i) for i in annual.index])
     ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
     ax.set_ylabel("calendar-year return (post-tax)")
     _legend_above(ax, title, ncol=min(k, 4))
-    fig.tight_layout(); fig.savefig(path); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)

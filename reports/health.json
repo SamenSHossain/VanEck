@@ -1,0 +1,69 @@
+{
+  "as_of": "2026-11-06",
+  "status": "ok",
+  "checks": [
+    {
+      "name": "last_bar_alignment",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": "all tickers priced on the latest bar"
+    },
+    {
+      "name": "recent_nans",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "price_jump",
+      "status": "ok",
+      "value": 0.1121,
+      "limit": 0.25,
+      "detail": ""
+    },
+    {
+      "name": "zero_volume_last_bar",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "adjustment_breaks",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "macro_sanity",
+      "status": "ok",
+      "value": "ok",
+      "limit": "",
+      "detail": ""
+    },
+    {
+      "name": "bar_staleness_days",
+      "status": "ok",
+      "value": 1,
+      "limit": 5,
+      "detail": "last bar 2026-11-06, now 2026-11-07"
+    },
+    {
+      "name": "cache_age_days",
+      "status": "ok",
+      "value": 0.1,
+      "limit": 3,
+      "detail": "fetched 2026-11-07 21:01Z"
+    },
+    {
+      "name": "signal_history",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    }
+  ]
+}
