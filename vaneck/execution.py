@@ -107,11 +107,11 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
     # exposure groups: target ticker (+ its substitute); held leftovers become zero-target groups
     members_of: dict[str, list[str]] = {}
     for x in targets.index:
-        m = [x]
+        mem = [x]
         s = subs.get(x)
         if s and s in prices.index:
-            m.append(s)
-        members_of[x] = m
+            mem.append(s)
+        members_of[x] = mem
     covered = {m for ms in members_of.values() for m in ms}
     for t in holdings:
         if t not in covered and value.get(t, 0.0) > 0:

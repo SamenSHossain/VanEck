@@ -12,7 +12,7 @@ out-of-sample period.
 | Equal weight | 0.37 | 0.41 | 0.44 | 0.44 |
 | 60/40 VanEck | 0.30 | 0.34 | 0.36 | 0.39 |
 | 60/40 SPY/BND | 0.48 | 0.50 | 0.51 | 0.53 |
-| Drift x MinVar (no overlay) | 0.37 | 0.38 | 0.38 | 0.38 |
+| Drift x MinVar (no overlay) | 0.37 | 0.39 | 0.39 | 0.40 |
 | **Gate 1 margin (EW minus 60/40 VanEck)** | **0.07** | **0.07** | **0.08** | **0.06** |
 
 | Equal weight under each policy | Tax drag (% NAV/yr) | One-way turnover | Costs (bps/yr) | Tracking error vs P0, pre-tax |
@@ -61,12 +61,12 @@ year over 60/40) would need 67 years of data under the annual test.
 |---|---|
 | Monthly excess over 60/40, Newey-West one-sided p | 0.13 |
 | Probabilistic Sharpe of the edge series vs zero | 0.85 |
-| Deflated Sharpe (12 trials) | 0.73 |
+| Deflated Sharpe (12 trials) | 0.74 |
 | Romano-Wolf adjusted p (12-strategy family) | 0.35 |
-| White reality-check p, primary family / all 12 | 0.82 / 0.35 |
+| White reality-check p, primary family / all 12 | 0.81 / 0.35 |
 
 Reading: the Drift rules are not refuted and not demonstrated. A deflated
-Sharpe of 0.73 says there is a 27% chance the observed Sharpe is what the best
+Sharpe of 0.74 says there is a 26% chance the observed Sharpe is what the best
 of twelve zero-edge trials would show; the stepdown p of 0.35 says the edge over
 60/40 is comfortably consistent with selection among twelve candidates. The
 primary six remain negative under every test. For future work the proposal in

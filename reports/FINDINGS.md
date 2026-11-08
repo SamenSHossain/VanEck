@@ -1,5 +1,10 @@
 # Why allocation rules fail on VanEck ETFs: findings
 
+> Revision 2026-11-08: the wash-sale accounting was corrected (shares sold, or
+> already sold, no longer count as their own replacement). Gate 1 numbers are
+> unchanged; Phase 2 post-tax Sharpe ratios moved by at most 0.01. Tables below
+> are the corrected values.
+
 Study window: 9 VanEck funds, out-of-sample 2017-06-01 to 2024-12-31 (91
 monthly rebalances, 7 full calendar years), $10M taxable account, costs tiered
 by liquidity, 37% tax with FIFO lots and wash-sale rules, cash at the 13-week
@@ -88,11 +93,11 @@ calendar-year returns against 60/40 VanEck, Bonferroni alpha 0.0083.
 | Strategy (with regime overlay) | CAGR post-tax | Sharpe post-tax | Max drawdown | Turnover | Mean annual excess vs 60/40 | p (annual) | p (monthly) |
 |---|---|---|---|---|---|---|---|
 | None x MinVar | 3.7% | 0.21 | -19.2% | 144%/yr | -1.8% | 0.69 | 0.77 |
-| None x MaxSharpe | 2.7% | 0.10 | -23.4% | 267%/yr | -3.4% | 0.89 | 0.82 |
-| Momentum x MinVar | 2.8% | 0.10 | -23.5% | 268%/yr | -3.4% | 0.89 | 0.80 |
-| Momentum x MaxSharpe | 2.6% | 0.09 | -23.8% | 278%/yr | -3.6% | 0.90 | 0.81 |
-| Drift x MinVar | 4.2% | 0.23 | -21.3% | 199%/yr | -1.6% | 0.72 | 0.70 |
-| Drift x MaxSharpe | 4.2% | 0.22 | -22.2% | 204%/yr | -1.6% | 0.73 | 0.70 |
+| None x MaxSharpe | 2.8% | 0.10 | -23.1% | 267%/yr | -3.3% | 0.89 | 0.81 |
+| Momentum x MinVar | 2.9% | 0.11 | -23.2% | 268%/yr | -3.3% | 0.89 | 0.80 |
+| Momentum x MaxSharpe | 2.7% | 0.10 | -23.5% | 278%/yr | -3.4% | 0.90 | 0.81 |
+| Drift x MinVar | 4.3% | 0.24 | -21.3% | 199%/yr | -1.4% | 0.71 | 0.69 |
+| Drift x MaxSharpe | 4.2% | 0.23 | -22.2% | 204%/yr | -1.6% | 0.73 | 0.70 |
 
 Gate 2: **no winner**. Every strategy is below the 60/40 benchmark and far below
 equal weight after tax; the pre-tax picture is the same (p >= 0.75 for all six).
@@ -102,10 +107,10 @@ equal weight after tax; the pre-tax picture is the same (p >= 0.75 for all six).
 | Strategy (no overlay) | CAGR post-tax | Sharpe post-tax | Max drawdown | Turnover | Mean annual excess vs 60/40 | p (annual) | p (monthly) |
 |---|---|---|---|---|---|---|---|
 | None x MinVar | 5.2% | 0.32 | -25.7% | 16%/yr | 0.0% | 0.50 | 0.67 |
-| None x MaxSharpe | 4.6% | 0.23 | -25.4% | 214%/yr | -1.2% | 0.76 | 0.70 |
-| Momentum x MinVar | 5.2% | 0.26 | -27.4% | 222%/yr | -0.7% | 0.68 | 0.56 |
-| Momentum x MaxSharpe | 5.1% | 0.26 | -27.7% | 233%/yr | -0.7% | 0.70 | 0.56 |
-| Drift x MinVar | 6.8% | 0.37 | -27.3% | 107%/yr | +1.4% | 0.19 | 0.17 |
+| None x MaxSharpe | 4.6% | 0.23 | -25.2% | 214%/yr | -1.2% | 0.77 | 0.69 |
+| Momentum x MinVar | 5.2% | 0.27 | -27.5% | 222%/yr | -0.6% | 0.67 | 0.55 |
+| Momentum x MaxSharpe | 5.2% | 0.26 | -27.7% | 233%/yr | -0.6% | 0.69 | 0.56 |
+| Drift x MinVar | 6.8% | 0.37 | -27.3% | 107%/yr | +1.4% | 0.19 | 0.16 |
 | Drift x MaxSharpe | 6.8% | 0.37 | -27.2% | 114%/yr | +1.4% | 0.16 | 0.15 |
 
 Removing the overlay improves every strategy by 0.1 to 0.2 Sharpe. The two
@@ -127,8 +132,8 @@ and cannot be evaluated.
 | Equal weight | 2.28 | 0.73 | -1.67 | 1.41 |
 | 60/40 VanEck | 2.19 | 0.39 | -1.74 | 1.24 |
 | None x MinVar + regime | 2.18 | -0.20 | -1.59 | 1.08 |
-| Drift x MinVar + regime | 2.58 | -0.24 | -2.16 | 0.79 |
-| Momentum x MaxSharpe + regime | 2.22 | -0.20 | -2.32 | 0.51 |
+| Drift x MinVar + regime | 2.58 | -0.25 | -2.16 | 0.84 |
+| Momentum x MaxSharpe + regime | 2.25 | -0.23 | -2.33 | 0.53 |
 
 | Max drawdown within regime days | Bull | Correction | Crisis | Neutral |
 |---|---|---|---|---|

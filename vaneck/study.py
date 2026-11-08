@@ -165,7 +165,7 @@ def regime_tables(runs: dict[str, Run], regimes: pd.Series, taxed: bool = True) 
 
 def gate3(regime_tbls: dict[str, pd.DataFrame], winners: list[str], ew_name: str = "EqualWeight",
           spec: Spec = SPEC) -> pd.DataFrame:
-    rows = []
+    rows: list[dict[str, object]] = []
     ew = regime_tbls[ew_name]
     for name in winners:
         t = regime_tbls[name]

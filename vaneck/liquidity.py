@@ -56,7 +56,7 @@ def capacity_curve(md: MarketData, splits: list[Split], spec: Spec = SPEC, aums=
                 "cum_shortfall": float(sim.nav.iloc[-1] / sim.nav.iloc[0] - free.nav.iloc[-1] / free.nav.iloc[0]),
                 "cagr": float((sim.nav.iloc[-1] / sim.nav.iloc[0]) ** (1 / years) - 1),
                 "turnover_pre": float(sim.turnover.sum() / years),
-                "capped_trade_share": float(sim.capped.sum() / n_trades) if n_trades else 0.0,
+                "capped_trade_share": float(sim.capped.sum() / n_trades) if (n_trades and sim.capped is not None) else 0.0,
             })
     curve = pd.DataFrame(rows).set_index(["portfolio", "aum"])
     cap_rows = []

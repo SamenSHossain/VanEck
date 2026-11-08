@@ -1,0 +1,39 @@
+{
+  "fred:DGS10": {
+    "fetched_utc": "2026-11-08T21:01:34Z",
+    "first": "1962-01-02",
+    "last": "2026-11-05",
+    "maps_to": "tnx",
+    "rows": 16197,
+    "status": "ok"
+  },
+  "fred:DTB3": {
+    "fetched_utc": "2026-11-08T21:01:34Z",
+    "first": "1954-01-04",
+    "last": "2026-11-05",
+    "maps_to": "irx",
+    "rows": 18203,
+    "status": "ok"
+  },
+  "fred:SP500": {
+    "fetched_utc": "2026-11-08T21:01:34Z",
+    "first": "2016-11-07",
+    "last": "2026-11-05",
+    "maps_to": "spx",
+    "rows": 2513,
+    "status": "ok"
+  },
+  "fred:VIXCLS": {
+    "fetched_utc": "2026-11-08T21:01:34Z",
+    "first": "1990-01-02",
+    "last": "2026-11-05",
+    "maps_to": "vix",
+    "rows": 9311,
+    "status": "ok"
+  },
+  "stooq:SMH": {
+    "error": "SourceUnavailable('stooq returned a challenge/HTML page instead of CSV')",
+    "fetched_utc": "2026-11-08T21:01:34Z",
+    "status": "unavailable"
+  }
+}

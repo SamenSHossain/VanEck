@@ -186,12 +186,12 @@ class TaxLedger:
             take = min(take, lot.units)
             frac = take / lot.units
             basis_part = lot.basis * frac
-            g = take * price - basis_part
+            lot_gain = take * price - basis_part
             if self._is_long_term(lot.date, date):
-                gain_lt += g
+                gain_lt += lot_gain
                 units_lt += take
             else:
-                gain_st += g
+                gain_st += lot_gain
                 units_st += take
             lot.basis -= basis_part
             lot.units -= take
@@ -202,21 +202,26 @@ class TaxLedger:
             self.last_loss_sale[ticker] = date
             loss_per_unit = -gain / units
             lt_flag = units_lt >= units_st
-            g = self._grp(ticker)
+            grp = self._grp(ticker)
             to_match = units
-            for b in self._buys[g]:               # replacement shares bought within 30 days *before*
+            for b in self._buys[grp]:             # replacement shares bought within 30 days *before* the sale
                 if to_match <= 1e-12:
                     break
                 if b.date >= date or b.units <= 1e-12:
                     continue
-                matched = min(to_match, b.units)
+                # only shares from that purchase that are *still held* are replacement shares
+                # (the shares being sold, and shares already sold earlier, do not count; IRS Pub. 550)
+                available = min(b.units, b.lot.units)
+                if available <= 1e-12:
+                    continue
+                matched = min(to_match, available)
                 b.units -= matched
                 to_match -= matched
                 disallowed += matched * loss_per_unit
                 b.lot.basis += matched * loss_per_unit
             if to_match > 1e-12:
-                self._loss_sales[g].append(_LossSale(date=date, ticker=ticker, units=to_match,
-                                                     loss_per_unit=loss_per_unit, long_term=lt_flag))
+                self._loss_sales[grp].append(_LossSale(date=date, ticker=ticker, units=to_match,
+                                                       loss_per_unit=loss_per_unit, long_term=lt_flag))
             # attribute the disallowance to the dominant character
             if lt_flag:
                 gain_lt += disallowed

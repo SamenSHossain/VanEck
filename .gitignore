@@ -5,3 +5,6 @@ __pycache__/
 build/
 dist/
 .ipynb_checkpoints/
+state/*.sqlite
+state/*.sqlite-journal
+state/alerts.log

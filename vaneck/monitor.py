@@ -33,6 +33,7 @@ def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: 
     cost_model = cost_model or CostModel(spec)
     curve = broker.equity_curve()
     rf = md.cash_yield(spec)
+    book = broker._require()
     decisions = _decisions(decisions_dir, strategy)
     submitted = [d for d in decisions if d["status"] == "submitted"]
     alerts: list[str] = []
@@ -57,7 +58,7 @@ def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: 
         "max_drawdown": perf["max_drawdown"], "current_drawdown": broker.drawdown(),
         "turnover_one_way_per_year": turn, "costs_dollars": broker.realized_costs(),
         "costs_bps_per_year": 1e4 * broker.realized_costs() / curve.mean() / years,
-        "dividends_received": float(sum(c["amount"] for c in broker.book["cash_flows"] if c["type"] == "dividend")),
+        "dividends_received": float(sum(c["amount"] for c in book["cash_flows"] if c["type"] == "dividend")),
     }
     if broker.drawdown() <= limits.drawdown_halt + 0.05:
         alerts.append(f"drawdown {broker.drawdown():.1%} within 5 points of the halt level {limits.drawdown_halt:.0%}")
@@ -73,7 +74,7 @@ def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: 
         tg = pd.DataFrame(rows).T.reindex(columns=cols).fillna(0.0).sort_index()
         tg = tg.loc[:, (tg != 0).any(axis=0) | tg.columns.isin(TRADEABLES)]
         return simulate(md, tg, spec=spec, taxed=False, cost_model=cost_model, end=curve.index[-1],
-                        initial=float(broker.book["initial_cash"]), name=weight_key, policy=policy)
+                        initial=float(book["initial_cash"]), name=weight_key, policy=policy)
 
     if submitted:
         tol = tracking_tolerance_per_year * years

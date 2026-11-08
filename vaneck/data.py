@@ -257,18 +257,18 @@ def make_synthetic(n_days: int = 2000, tickers: list[str] | None = None, seed: i
     idio = rng.normal(0.0, daily_vol * 0.8, size=(n_days, n))
     drift = rng.normal(0.0003, 0.0002, size=n)
     rets = factors @ loadings.T + idio + drift
-    adj = pd.DataFrame(100.0 * np.cumprod(1.0 + rets, axis=0), index=idx, columns=tickers)
-    # Quarterly distribution on the last business day of Mar/Jun/Sep/Dec.
+    # Unadjusted (split-adjusted) close is the base path; a quarterly distribution is paid on the
+    # first business day of each quarter at ``div_yield / 4`` of the previous close.
+    close = pd.DataFrame(100.0 * np.cumprod(1.0 + rets, axis=0), index=idx, columns=tickers)
     dist = pd.DataFrame(0.0, index=idx, columns=tickers)
-    close = adj.copy()
-    q_end = idx[idx.is_quarter_end | (idx.to_period("Q") != idx.shift(1, "B").to_period("Q"))]
-    for d in q_end:
-        dist.loc[d] = close.loc[d] * div_yield / 4.0
-    # Unadjusted close: Yahoo's Adj Close = Close x prod_{s>t}(1 - div_s / close_{s-1}),
-    # so the Adj/Close ratio is <= 1 and non-decreasing through time (equal to 1 on the last bar).
-    f = (1.0 - dist / adj).cumprod()
-    ratio = f.iloc[-1] / f
-    close = adj / ratio
+    q_start = idx[1:][idx[1:].to_period("Q") != idx[:-1].to_period("Q")]
+    for d in q_start:
+        dist.loc[d] = close.shift(1).loc[d] * div_yield / 4.0
+    # Yahoo's convention: Adj Close_t = Close_t x prod_{s>t}(1 - div_s / close_{s-1}); the Adj/Close
+    # ratio is <= 1, non-decreasing through time and equal to 1 on the last bar.
+    factor = 1.0 - dist / close.shift(1).bfill()
+    cp = factor.cumprod()
+    adj = close * (cp.iloc[-1] / cp)
     volume = pd.DataFrame(rng.integers(50_000, 5_000_000, size=(n_days, n)), index=idx, columns=tickers).astype(float)
     spx = 1000.0 * np.cumprod(1.0 + rng.normal(0.0004, 0.011, n_days))
     vix = np.clip(18.0 + 6.0 * np.cumsum(rng.normal(0, 0.1, n_days)) % 12.0, 9.0, 60.0)

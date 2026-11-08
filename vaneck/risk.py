@@ -177,7 +177,7 @@ def pre_trade_checks(orders: list[Order], targets: pd.Series, equity: float, cas
             dust.append(o.ticker)
             continue
         p = o.participation
-        if p is not None and p > limits.max_participation:
+        if p is not None and o.adv is not None and p > limits.max_participation:
             max_shares = limits.max_participation * o.adv / o.price
             new_shares = max_shares if limits.allow_fractional else math.floor(max_shares)
             if new_shares <= 0:

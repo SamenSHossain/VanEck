@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -56,7 +57,7 @@ def run_ladder(md: MarketData, splits: list[Split], spec: Spec = SPEC, policies:
         tgt = build_targets(md, splits, fn, TRADEABLES)
         p0_pre = None
         for label, pol in policies.items():
-            kw = dict(spec=spec, cost_model=cost_model, end=spec.study_end, name=f"{pname}|{label}", policy=pol)
+            kw: dict[str, Any] = dict(spec=spec, cost_model=cost_model, end=spec.study_end, name=f"{pname}|{label}", policy=pol)
             pre = simulate(md, tgt, taxed=False, **kw)
             post = simulate(md, tgt, taxed=True, **kw)
             if p0_pre is None:

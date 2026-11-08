@@ -108,3 +108,48 @@ parallel as the control. Nothing in this repository talks to a real broker.
 - No automatic submission: a human approves every `--submit`.
 - No strategy has earned deployment: the study stopped at Gate 1, so the
   operational pipeline is exercised with equal weight as a benchmark control.
+
+## Second source and cross-validation
+
+`python -m vaneck fetch --secondary` refreshes FRED (VIX close, 10-year CMT,
+3-month bill, S&P 500) into `data/secondary/`. `python -m vaneck check --cross`
+adds three layers to the health gate:
+
+- **FRED agreement** for every macro input: block if the last common day
+  disagrees beyond tolerance, warn if more than 1% of days do.
+- **Peer divergence**: each fund's daily returns against its cached substitute
+  (SMH/SOXX, GDX/RING, ...). A one-day gap above 10% warns, above 25% blocks;
+  correlation is checked only for pairs that move at least 0.3% a day.
+- **Corporate-actions audit**: every change in Yahoo's adjustment factor must
+  coincide with a recorded distribution of matching size. Unexplained factor
+  changes block; a distribution above 10% of price is flagged for review.
+
+Stooq is wired as a price provider but currently answers with a JavaScript
+challenge, so it reports itself unavailable. A keyed vendor plugs in behind
+`vaneck.sources.PriceProvider`.
+
+## Golden results
+
+`tests/golden/` freezes the key numbers of the main study and the extensions
+together with the configuration hash and the raw-data hash they came from.
+`python -m vaneck golden` (and the test suite) fail if either hash changed or
+if the numbers moved while the hashes did not. After a deliberate change, run
+`python -m vaneck golden --update`, read the diff, and commit it: results can
+only change together with a visible change in inputs or code.
+
+## History, status, alerts, dashboard
+
+Every `check`, `rebalance`, `replay`, `monitor`, `all` and `extensions` run is
+recorded in `state/vaneck.sqlite`. `python -m vaneck history` prints the
+timeline, `python -m vaneck status` the latest state (exit 1 when anything is
+blocked or alerting), and `python -m vaneck dashboard` renders
+`reports/dashboard.html`. A blocked health check, a blocked or unexecutable
+decision and any monitor alert are delivered to the webhook in
+`VANECK_WEBHOOK_URL` (Slack-compatible JSON) and always appended to
+`state/alerts.log`.
+
+## Type checking, packaging, container
+
+`make typecheck` runs mypy (CI does too); `pip install -e .` provides the
+`vaneck` console command; `make docker` builds an image that runs the test
+suite at build time and defaults to the health check.

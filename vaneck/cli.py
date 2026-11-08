@@ -29,6 +29,10 @@ def _save(df: pd.DataFrame, name: str, outdir: Path):
 def cmd_fetch(args):
     m = data.update_cache(force=args.force)
     print(f"cached {len(m)} tickers in {data.RAW_DIR}")
+    if args.secondary:
+        from . import sources
+        sm = sources.update_secondary_cache(price_tickers=list(data.UNIVERSE))
+        print("secondary sources: " + ", ".join(f"{k}={v['status']}" for k, v in sm.items()))
     md = data.build_market_data()
     q = data.data_quality_report(md)
     print(q.to_string())
@@ -243,7 +247,11 @@ def cmd_all(args, phases=("gate0", "gate1", "phase2")):
         parts.append("## Gate 1\n\nNot run: Gate 0 failed. Re-run with `--force`.\n")
     (outdir / "REPORT.md").write_text("\n".join(parts))
     (outdir / "gates.json").write_text(json.dumps(verdicts, indent=2, default=str))
-    audit.write_json(outdir / "run_manifest.json", audit.run_manifest("all", spec, extra={"gates": verdicts}))
+    manifest = audit.run_manifest("all", spec, extra={"gates": verdicts})
+    audit.write_json(outdir / "run_manifest.json", manifest)
+    st = _store()
+    st.record_run(manifest, "ok", payload=verdicts)
+    st.close()
     print(json.dumps(verdicts, indent=2, default=str))
     print(f"report written to {outdir / 'REPORT.md'}")
     return 0
@@ -264,6 +272,16 @@ def cmd_validate(args):
     _save(tbl, "holdout_summary", outdir)
     print(tbl[["cagr_post", "sharpe_pre", "sharpe_post", "mdd_post", "turnover_pre"]].to_string())
     return 0
+
+
+def _store():
+    from .store import Store
+    return Store()
+
+
+def _notify(source: str, severity: str, message: str, payload=None, store=None) -> None:
+    from .notify import notify
+    notify(source, severity, message, payload=payload, store=store)
 
 
 class _JsonFormatter(logging.Formatter):
@@ -308,8 +326,23 @@ def _print_decision(d: dict) -> None:
 def cmd_check(args):
     md = data.build_market_data()
     rep = health.check_market_data(md)
+    payload = rep.to_dict()
+    if args.cross:
+        from . import crossval, sources
+        xrep, tables = crossval.crossval_report(md, sources.load_secondary())
+        rep.checks += xrep.checks
+        payload = rep.to_dict()
+        payload["crossval_tables"] = {k: v.to_dict(orient="records") for k, v in tables.items()}
+        for k, v in tables.items():
+            _save(v, f"crossval_{k}", REPORT_DIR)
     print(rep.to_json() if args.json else rep.to_markdown())
-    audit.write_json(REPORT_DIR / "health.json", rep.to_dict())
+    audit.write_json(REPORT_DIR / "health.json", payload)
+    st = _store()
+    st.record_health(payload)
+    if rep.blocked:
+        names = ", ".join(c.name for c in rep.checks if c.status == "block")
+        _notify("check", "block", f"data health blocked: {names}", payload={"as_of": payload["as_of"]}, store=st)
+    st.close()
     return 2 if rep.blocked else 0
 
 
@@ -329,7 +362,7 @@ def cmd_paper(args):
             return 1
         broker.advance_to(md.index[-1]) if args.mark else None
         print(f"book {args.book}: as of {broker.as_of.date()}, equity {broker.equity():,.0f}, cash {broker.cash():,.0f}, "
-              f"drawdown {broker.drawdown():.2%}, fills {len(broker.book['fills'])}")
+              f"drawdown {broker.drawdown():.2%}, fills {len(broker._require()['fills'])}")
         print((100 * broker.weights()).round(2).to_string())
         return 0
     if args.action == "reset":
@@ -364,6 +397,14 @@ def cmd_rebalance(args):
     d = live.rebalance(md, args.strategy, broker, Path(args.decisions), as_of=args.as_of,
                        dry_run=not args.submit, force=args.force, limits=RiskLimits(), policy=_policy(args.policy))
     _print_decision(d)
+    st = _store()
+    st.record_decision(d)
+    if d["status"] in ("blocked", "awaiting_exec_bar"):
+        sev = "block" if d["status"] == "blocked" else "warn"
+        _notify("rebalance", sev, f"{d['strategy']} {d['signal_date']} {d['status']}: " + "; ".join(d["notes"]) if d["notes"]
+                else f"{d['strategy']} {d['signal_date']} {d['status']}",
+                payload={"run_id": d["run_id"], "health": d["health"]["status"], "risk": d["risk"]["status"]}, store=st)
+    st.close()
     return {"dry_run": 0, "submitted": 0, "blocked": 2}.get(d["status"], 1)
 
 
@@ -375,6 +416,11 @@ def cmd_replay(args):
     broker = PaperBroker(Path(args.book), md)
     rep = monitor.monitor(md, broker, Path(args.decisions), args.strategy, out_dir=Path(args.out))
     print(monitor.monitor_markdown(rep))
+    st = _store()
+    for d in decs:
+        st.record_decision(d)
+    st.record_monitor(rep)
+    st.close()
     return 0
 
 
@@ -388,6 +434,12 @@ def cmd_monitor(args):
         broker.advance_to(md.index[-1])
     rep = monitor.monitor(md, broker, Path(args.decisions), args.strategy, out_dir=Path(args.out))
     print(monitor.monitor_markdown(rep))
+    st = _store()
+    st.record_monitor(rep)
+    if rep.get("alerts"):
+        _notify("monitor", "alert", f"{args.strategy}: " + " | ".join(rep["alerts"]),
+                payload={"as_of": rep.get("as_of")}, store=st)
+    st.close()
     return 1 if rep.get("alerts") else 0
 
 
@@ -396,8 +448,63 @@ def cmd_extensions(args):
     md = data.build_market_data()
     res = extensions.run_all(md, out=Path(args.out), n_boot=args.boot, plots=not args.no_plots)
     print(json.dumps(res, indent=2, default=str))
+    st = _store()
+    st.record_run(audit.run_manifest("extensions"), "ok", payload={k: v for k, v in res.items() if k != "manifest"})
+    st.close()
     print(f"report written to {Path(args.out) / 'EXTENSIONS.md'}")
     return 0
+
+
+def cmd_history(args):
+    st = _store()
+    for e in st.timeline(args.last):
+        print(f"{e['time']}  {e['kind']:9s} {e['summary']}")
+    st.close()
+    return 0
+
+
+def cmd_status(args):
+    st = _store()
+    h, d, m = st.latest("health"), st.latest("decisions"), st.latest("monitor")
+    bad = False
+    h_line = f"{h['status']} as of {h['as_of']} ({h['n_block']} block, {h['n_warn']} warn) at {h['created_utc']}" if h else "none"
+    d_line = (f"{d['strategy']} signal {d['signal_date']} -> {d['status']} ({d['n_orders']} orders) at {d['created_utc']}"
+              if d else "none")
+    m_line = f"{m['strategy']} {m['status']} ({m['n_alerts']} alerts) as of {m['as_of']} at {m['created_utc']}" if m else "none"
+    print("health:  ", h_line)
+    print("decision:", d_line)
+    print("monitor: ", m_line)
+    bad = bool((h and h["status"] == "block") or (d and d["status"] == "blocked") or (m and m["status"] == "alert"))
+    st.close()
+    return 1 if bad else 0
+
+
+def cmd_dashboard(args):
+    from . import dashboard
+    st = _store()
+    out = dashboard.render(st, Path(args.book), Path(args.out))
+    st.close()
+    print(f"dashboard written to {out}")
+    return 0
+
+
+def cmd_golden(args):
+    from . import golden
+    md = data.build_market_data()
+    current = golden.compute(md)
+    if args.update:
+        m = golden.write(current)
+        print(f"golden files written to {golden.GOLDEN_DIR} (config {m['config_hash']}, data {m['data_hash']})")
+        return 0
+    manifest, frames = golden.load()
+    changed = golden.inputs_changed(manifest)
+    problems = golden.compare(current, frames)
+    for c in changed:
+        print("INPUT CHANGED:", c)
+    for pr in problems:
+        print("MISMATCH:", pr)
+    print("golden check:", "OK" if not (changed or problems) else "FAIL")
+    return 0 if not (changed or problems) else 1
 
 
 def main(argv=None) -> int:
@@ -407,6 +514,7 @@ def main(argv=None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("fetch", help="download/refresh the raw data cache")
     f.add_argument("--force", action="store_true")
+    f.add_argument("--secondary", action="store_true", help="also refresh FRED (and any price provider) for cross-validation")
     phase_sets = (("gate0", ("gate0",)), ("gate1", ("gate0", "gate1")),
                   ("phase2", ("gate0", "gate1", "phase2")), ("all", ("gate0", "gate1", "phase2")))
     for name, phases in phase_sets:
@@ -423,6 +531,7 @@ def main(argv=None) -> int:
 
     c = sub.add_parser("check", help="data health report (exit 2 on a blocking problem)")
     c.add_argument("--json", action="store_true")
+    c.add_argument("--cross", action="store_true", help="add cross-validation: FRED macro, peer divergence, corporate actions")
     c.set_defaults(func=cmd_check)
 
     book_default, dec_default = str(live.PAPER_DIR / "book.json"), str(live.PAPER_DIR / "decisions")
@@ -465,6 +574,20 @@ def main(argv=None) -> int:
     mo.add_argument("--out", default=str(REPORT_DIR))
     mo.add_argument("--mark", action="store_true", help="roll the book to the latest bar first")
     mo.set_defaults(func=cmd_monitor)
+
+    hi = sub.add_parser("history", help="timeline of runs, health checks, decisions, monitor reports and alerts")
+    hi.add_argument("--last", type=int, default=30)
+    hi.set_defaults(func=cmd_history)
+    stt = sub.add_parser("status", help="latest health / decision / monitor state (exit 1 if anything is blocked or alerting)")
+    stt.set_defaults(func=cmd_status)
+    db = sub.add_parser("dashboard", help="render reports/dashboard.html from the run history and the paper book")
+    db.add_argument("--book", default=book_default)
+    db.add_argument("--out", default=str(REPORT_DIR / "dashboard.html"))
+    db.set_defaults(func=cmd_dashboard)
+
+    g = sub.add_parser("golden", help="check (or --update) the frozen key results against the current engine and inputs")
+    g.add_argument("--update", action="store_true")
+    g.set_defaults(func=cmd_golden)
 
     ex = sub.add_parser("extensions", help="pre-registered extensions: tax-aware execution, statistical design, capacity")
     ex.add_argument("--out", default=str(REPORT_DIR))

@@ -49,8 +49,8 @@ class PaperBroker:
         self.spec = spec
         self.cost_model = cost_model or CostModel(spec)
         self.book: dict | None = json.loads(self.path.read_text()) if self.path.exists() else None
-        has_tax = bool(self.book) and "tax" in self.book
-        self.ledger = TaxLedger.from_dict(self.book["tax"], spec) if has_tax else TaxLedger(spec, taxed=True)
+        book = self.book or {}
+        self.ledger = TaxLedger.from_dict(book["tax"], spec) if "tax" in book else TaxLedger(spec, taxed=True)
         self._adv = None
 
     # -- lifecycle ------------------------------------------------------------ #
@@ -73,11 +73,12 @@ class PaperBroker:
         self.save()
 
     def save(self) -> None:
+        b = self._require()
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.book["tax"] = self.ledger.to_dict()
-        self.book["realized_by_year"] = {str(k): v for k, v in self.ledger.realized_by_year.items()}
-        self.book["tax_liability_accrued"] = self.ledger.accrued_liability()
-        self.path.write_text(json.dumps(self.book, indent=2, default=str))
+        b["tax"] = self.ledger.to_dict()
+        b["realized_by_year"] = {str(k): v for k, v in self.ledger.realized_by_year.items()}
+        b["tax_liability_accrued"] = self.ledger.accrued_liability()
+        self.path.write_text(json.dumps(b, indent=2, default=str))
 
     def holding_views(self, date=None) -> dict[str, HoldingView]:
         px = self.prices(date)
@@ -180,9 +181,9 @@ class PaperBroker:
         if date < self.as_of:
             raise ValueError("cannot execute before the book's as_of date")
         self.advance_to(date)
-        if self._adv is None:
-            self._adv = self.cost_model.adv_table(self.md)
-        adv_row = self._adv.loc[date]
+        adv_table = self._adv if self._adv is not None else self.cost_model.adv_table(self.md)
+        self._adv = adv_table
+        adv_row = adv_table.loc[date]
         px = self.md.close.loc[date]
         fills: list[Fill] = []
         pos = b["positions"]

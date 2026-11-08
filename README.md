@@ -28,8 +28,9 @@ capacity under the pre-registered limits is about $3M.
 
 ```bash
 pip install -r requirements.txt
-make test            # 71 tests: lookahead invariance, golden regression, tax lots, planner, risk controls, reconciliation
+make test            # 79 tests: lookahead + leak canary, property-based ledger/planner, golden regression, tax lots, risk, reconciliation
 make lint            # ruff
+make typecheck       # mypy
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
 ```
 
@@ -38,7 +39,7 @@ make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes rep
 | Layer | What it does | Modules |
 |---|---|---|
 | **Research** | Pre-registered walk-forward study: data, lookahead guard, cost and tax models, baselines, locked strategies, Bonferroni-corrected tests, regime analysis, gates; extensions: execution-policy ladder, power/HAC/deflated-Sharpe/Romano-Wolf, capacity curve | `config` `data` `calendar` `universe` `costs` `tax` `execution` `portfolio` `baselines` `regimes` `signals` `optimizers` `strategies` `stats` `metrics` `study` `report` `taxaware` `design` `liquidity` `extensions` |
-| **Infrastructure** | Reliable, observable runs: run manifests (git SHA, config hash, data hash), data health gate with exit codes, structured logs, CI on every push, scheduled monthly cycle | `audit` `health` `cli` `.github/workflows` |
+| **Infrastructure** | Reliable, observable runs: run manifests (git SHA, config hash, data hash), data health gate with exit codes, cross-validation against FRED and peers plus a corporate-actions audit, golden results coupled to input hashes, property-based and adversarial tests, SQLite history with alerts and a status page, structured logs, mypy, CI on every push, scheduled monthly cycle | `audit` `health` `sources` `crossval` `golden` `store` `notify` `dashboard` `cli` `.github/workflows` |
 | **Trading** | Disciplined decisions: explicit pre-trade risk limits, idempotent decision records, paper broker with real share/dividend/split mechanics, monitor that reconciles paper against research and raises alerts | `risk` `broker` `live` `monitor` |
 
 The operational layer is exercised with equal weight as a benchmark control,
@@ -52,7 +53,10 @@ for the runbook.
 | `python -m vaneck fetch [--force]` | refresh the raw Yahoo Finance cache in `data/raw/` (the committed cache reproduces everything offline) |
 | `python -m vaneck gate0` / `gate1` / `phase2` / `all [--force]` | run the study through that gate; without `--force` it stops at the first failed gate, as the plan prescribes |
 | `python -m vaneck validate` | the untouched 2025+ hold-out (only meaningful after a Phase 2 winner; deliberately not run) |
-| `python -m vaneck check [--json]` | data health report; exit code 2 on a blocking problem |
+| `python -m vaneck check [--json] [--cross]` | data health report; `--cross` adds FRED agreement, peer divergence and the corporate-actions audit; exit code 2 on a blocking problem |
+| `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
+| `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
+| `python -m vaneck status` / `history` / `dashboard` | latest state (exit 1 if blocked or alerting), the run timeline, and `reports/dashboard.html` |
 | `python -m vaneck paper init|status|reset` | manage the paper book |
 | `python -m vaneck extensions` | the three pre-registered extensions; writes `reports/EXTENSIONS.md` |
 | `python -m vaneck rebalance --strategy S [--as-of D] [--submit] [--policy P2]` | one decision: health, targets, orders, risk checks, decision record; dry run unless `--submit`; optional execution policy P0-P3 |
@@ -94,18 +98,26 @@ vaneck/
   liquidity.py   extension 3: square-root impact + participation cap, capacity curve
   extensions.py  runs the three extensions and writes reports/EXTENSIONS.md
   audit.py       run manifests: run id, git SHA, config hash, data hash, versions
+  sources.py     secondary sources: FRED series, price-provider interface (Stooq wired, currently challenged)
+  crossval.py    FRED agreement, peer divergence, corporate-actions audit
+  golden.py      frozen key results coupled to the config and data hashes
+  store.py       SQLite history of runs, health, decisions, monitor reports, alerts
+  notify.py      webhook + local alert log
+  dashboard.py   static status page
   health.py      data health checks with block/warn severities
   risk.py        pre-trade risk limits, order construction, risk report
   broker.py      Broker protocol and the paper broker (shares, cash, dividends, splits, fills)
   live.py        idempotent rebalance decision pipeline, decision records, replay
   monitor.py     paper-vs-research reconciliation and alerts
   cli.py         python -m vaneck ...
-tests/           71 tests across all layers
+tests/           79 tests across all layers incl. hypothesis property tests, a leak canary and goldens
 data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes
+data/secondary/  FRED series for cross-validation
 docs/            the plan, the pre-registered SPEC, the operations runbook
 reports/         REPORT.md, FINDINGS.md, tables/*.csv, figures/*.png, gates.json, run_manifest.json, monitor_*.md
 paper/           paper book and decision records from the 2024 rehearsal and the latest dry run
-.github/         ci.yml (lint, tests, deterministic dry-run decision), monthly.yml (scheduled cycle)
+.github/         ci.yml (lint, mypy, tests, cross-check, dry-run decision), monthly.yml (scheduled cycle)
+Dockerfile       image that runs the suite at build and defaults to `vaneck check`
 ```
 
 ## Data

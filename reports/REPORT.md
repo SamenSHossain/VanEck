@@ -80,23 +80,23 @@ Calendar-year returns, post-tax (full years only):
 
 | name | cagr_pre | cagr_post | vol_post | sharpe_pre | sharpe_post | mdd_post | turnover_pre | cost_bps_yr | tax_pct_yr |
 |---|---|---|---|---|---|---|---|---|---|
-| NonexMinVar+Regime | 5.7% | 3.7% | 8.7% | 0.436 | 0.206 | -19.2% | 144.0% | 21.310 | 1.784 |
-| NonexMaxSharpe+Regime | 5.3% | 2.7% | 11.3% | 0.323 | 0.096 | -23.4% | 267.2% | 41.716 | 2.478 |
-| MomentumxMinVar+Regime | 5.5% | 2.8% | 12.1% | 0.325 | 0.104 | -23.5% | 267.9% | 41.414 | 2.669 |
-| MomentumxMaxSharpe+Regime | 5.3% | 2.6% | 12.2% | 0.307 | 0.091 | -23.8% | 277.8% | 43.484 | 2.631 |
-| DriftxMinVar+Regime | 7.2% | 4.2% | 11.0% | 0.498 | 0.226 | -21.3% | 198.6% | 30.869 | 2.666 |
-| DriftxMaxSharpe+Regime | 7.1% | 4.2% | 11.1% | 0.479 | 0.225 | -22.2% | 204.0% | 32.224 | 2.607 |
+| NonexMinVar+Regime | 5.7% | 3.7% | 8.7% | 0.436 | 0.207 | -19.2% | 144.0% | 21.310 | 1.782 |
+| NonexMaxSharpe+Regime | 5.3% | 2.8% | 11.2% | 0.323 | 0.104 | -23.1% | 267.2% | 41.716 | 2.383 |
+| MomentumxMinVar+Regime | 5.5% | 2.9% | 12.1% | 0.325 | 0.112 | -23.2% | 267.9% | 41.414 | 2.571 |
+| MomentumxMaxSharpe+Regime | 5.3% | 2.7% | 12.2% | 0.307 | 0.099 | -23.5% | 277.8% | 43.484 | 2.530 |
+| DriftxMinVar+Regime | 7.2% | 4.3% | 11.0% | 0.498 | 0.237 | -21.3% | 198.6% | 30.869 | 2.575 |
+| DriftxMaxSharpe+Regime | 7.1% | 4.2% | 11.1% | 0.479 | 0.225 | -22.2% | 204.0% | 32.224 | 2.605 |
 
 ### Pre-registered test: post-tax annual returns vs 60/40 VanEck
 
 |  | n_years | mean_annual_excess | t_annual | p_one_sided | p_monthly_paired | sharpe_diff | p_bootstrap_sharpe | significant |
 |---|---|---|---|---|---|---|---|---|
-| NonexMinVar+Regime | 7 | -0.018 | -0.535 | 0.694 | 0.766 | -0.092 | 0.665 | no |
-| NonexMaxSharpe+Regime | 7 | -0.034 | -1.372 | 0.890 | 0.818 | -0.202 | 0.791 | no |
-| MomentumxMinVar+Regime | 7 | -0.034 | -1.391 | 0.893 | 0.802 | -0.194 | 0.789 | no |
-| MomentumxMaxSharpe+Regime | 7 | -0.036 | -1.477 | 0.905 | 0.815 | -0.207 | 0.803 | no |
-| DriftxMinVar+Regime | 7 | -0.016 | -0.626 | 0.723 | 0.700 | -0.072 | 0.611 | no |
-| DriftxMaxSharpe+Regime | 7 | -0.016 | -0.646 | 0.729 | 0.700 | -0.073 | 0.612 | no |
+| NonexMinVar+Regime | 7 | -0.018 | -0.535 | 0.694 | 0.766 | -0.092 | 0.664 | no |
+| NonexMaxSharpe+Regime | 7 | -0.033 | -1.352 | 0.887 | 0.811 | -0.194 | 0.783 | no |
+| MomentumxMinVar+Regime | 7 | -0.033 | -1.338 | 0.885 | 0.795 | -0.186 | 0.774 | no |
+| MomentumxMaxSharpe+Regime | 7 | -0.034 | -1.422 | 0.898 | 0.808 | -0.199 | 0.790 | no |
+| DriftxMinVar+Regime | 7 | -0.014 | -0.569 | 0.705 | 0.687 | -0.062 | 0.592 | no |
+| DriftxMaxSharpe+Regime | 7 | -0.016 | -0.638 | 0.727 | 0.699 | -0.073 | 0.609 | no |
 
 ### Same test, pre-tax
 
@@ -114,43 +114,43 @@ Calendar-year returns, post-tax (full years only):
 |  | mean_annual_excess | p_one_sided | sharpe_diff | p_bootstrap_sharpe |
 |---|---|---|---|---|
 | NonexMinVar+Regime | -0.033 | 0.825 | -0.162 | 0.774 |
-| NonexMaxSharpe+Regime | -0.048 | 0.959 | -0.272 | 0.852 |
-| MomentumxMinVar+Regime | -0.049 | 0.960 | -0.264 | 0.857 |
-| MomentumxMaxSharpe+Regime | -0.050 | 0.965 | -0.278 | 0.867 |
-| DriftxMinVar+Regime | -0.031 | 0.881 | -0.143 | 0.716 |
-| DriftxMaxSharpe+Regime | -0.031 | 0.889 | -0.144 | 0.718 |
+| NonexMaxSharpe+Regime | -0.047 | 0.958 | -0.265 | 0.846 |
+| MomentumxMinVar+Regime | -0.048 | 0.957 | -0.257 | 0.847 |
+| MomentumxMaxSharpe+Regime | -0.049 | 0.962 | -0.270 | 0.860 |
+| DriftxMinVar+Regime | -0.029 | 0.871 | -0.132 | 0.697 |
+| DriftxMaxSharpe+Regime | -0.031 | 0.887 | -0.144 | 0.719 |
 
 ### Diagnostics: the same six rules without the regime overlay (not hypothesis tests)
 
 | name | cagr_pre | cagr_post | vol_post | sharpe_pre | sharpe_post | mdd_post | turnover_pre | cost_bps_yr | tax_pct_yr |
 |---|---|---|---|---|---|---|---|---|---|
 | NonexMinVar | 7.6% | 5.2% | 10.7% | 0.532 | 0.320 | -25.7% | 16.2% | 3.634 | 1.951 |
-| NonexMaxSharpe | 7.7% | 4.6% | 13.6% | 0.457 | 0.233 | -25.4% | 213.9% | 34.825 | 2.924 |
-| MomentumxMinVar | 8.6% | 5.2% | 15.0% | 0.482 | 0.265 | -27.4% | 222.4% | 34.717 | 3.271 |
-| MomentumxMaxSharpe | 8.5% | 5.1% | 15.1% | 0.476 | 0.261 | -27.7% | 232.6% | 37.191 | 3.265 |
-| DriftxMinVar | 11.0% | 6.8% | 14.4% | 0.650 | 0.372 | -27.3% | 106.6% | 17.079 | 3.334 |
+| NonexMaxSharpe | 7.7% | 4.6% | 13.6% | 0.457 | 0.234 | -25.2% | 213.9% | 34.825 | 2.838 |
+| MomentumxMinVar | 8.6% | 5.2% | 15.0% | 0.482 | 0.267 | -27.5% | 222.4% | 34.717 | 3.219 |
+| MomentumxMaxSharpe | 8.5% | 5.2% | 15.1% | 0.476 | 0.263 | -27.7% | 232.6% | 37.191 | 3.217 |
+| DriftxMinVar | 11.0% | 6.8% | 14.4% | 0.650 | 0.373 | -27.3% | 106.6% | 17.079 | 3.333 |
 | DriftxMaxSharpe | 11.0% | 6.8% | 14.6% | 0.643 | 0.374 | -27.2% | 113.7% | 19.164 | 3.245 |
 
 |  | n_years | mean_annual_excess | t_annual | p_one_sided | p_monthly_paired | sharpe_diff | p_bootstrap_sharpe | significant |
 |---|---|---|---|---|---|---|---|---|
 | NonexMinVar | 7 | -0.000 | -0.001 | 0.500 | 0.667 | 0.022 | 0.436 | no |
-| NonexMaxSharpe | 7 | -0.012 | -0.755 | 0.761 | 0.697 | -0.065 | 0.684 | no |
-| MomentumxMinVar | 7 | -0.007 | -0.486 | 0.678 | 0.559 | -0.033 | 0.610 | no |
-| MomentumxMaxSharpe | 7 | -0.007 | -0.549 | 0.699 | 0.564 | -0.037 | 0.609 | no |
-| DriftxMinVar | 7 | 0.014 | 0.933 | 0.194 | 0.165 | 0.074 | 0.202 | no |
+| NonexMaxSharpe | 7 | -0.012 | -0.782 | 0.768 | 0.694 | -0.064 | 0.684 | no |
+| MomentumxMinVar | 7 | -0.006 | -0.454 | 0.667 | 0.551 | -0.031 | 0.594 | no |
+| MomentumxMaxSharpe | 7 | -0.006 | -0.521 | 0.689 | 0.558 | -0.035 | 0.604 | no |
+| DriftxMinVar | 7 | 0.014 | 0.942 | 0.191 | 0.162 | 0.075 | 0.201 | no |
 | DriftxMaxSharpe | 7 | 0.014 | 1.076 | 0.162 | 0.150 | 0.076 | 0.194 | no |
 
 ### Calendar-year returns, post-tax
 
 | year | Equal weight | 60/40 VanEck | NonexMinVar+Regime | NonexMaxSharpe+Regime | MomentumxMinVar+Regime | MomentumxMaxSharpe+Regime | DriftxMinVar+Regime | DriftxMaxSharpe+Regime |
 |---|---|---|---|---|---|---|---|---|
-| 2018 | -12.4% | -11.8% | -6.7% | -9.9% | -9.2% | -9.4% | -10.4% | -11.0% |
-| 2019 | 22.6% | 20.6% | 12.0% | 13.3% | 13.1% | 13.4% | 17.8% | 18.8% |
-| 2020 | 22.5% | 22.4% | 9.1% | 9.7% | 8.7% | 8.3% | 8.5% | 8.3% |
-| 2021 | 13.9% | 12.3% | 1.6% | 3.0% | 5.1% | 4.8% | 5.7% | 5.9% |
+| 2018 | -12.4% | -11.8% | -6.7% | -9.8% | -9.2% | -9.4% | -10.4% | -11.0% |
+| 2019 | 22.6% | 20.6% | 12.0% | 13.2% | 13.8% | 14.1% | 18.6% | 19.0% |
+| 2020 | 22.5% | 22.4% | 9.1% | 9.8% | 8.0% | 7.7% | 8.5% | 8.2% |
+| 2021 | 13.9% | 12.3% | 1.6% | 3.5% | 5.7% | 5.5% | 5.7% | 5.9% |
 | 2022 | -15.4% | -17.3% | -10.6% | -15.3% | -16.1% | -16.5% | -14.1% | -14.9% |
 | 2023 | 11.3% | 9.8% | 10.7% | 7.4% | 6.3% | 6.9% | 12.4% | 12.3% |
-| 2024 | 4.6% | 0.8% | 8.1% | 5.0% | 5.0% | 4.2% | 5.7% | 6.0% |
+| 2024 | 4.6% | 0.8% | 8.1% | 5.0% | 5.0% | 4.2% | 5.9% | 6.0% |
 
 ## Phase 2.4 - regime breakdown (post-tax)
 
@@ -161,13 +161,13 @@ Sharpe by regime:
 | run | Bull | Correction | Crisis | Neutral |
 |---|---|---|---|---|
 | 60/40 VanEck | 2.192 | 0.393 | -1.743 | 1.244 |
-| DriftxMaxSharpe+Regime | 2.654 | -0.247 | -2.288 | 0.867 |
-| DriftxMinVar+Regime | 2.581 | -0.245 | -2.158 | 0.792 |
+| DriftxMaxSharpe+Regime | 2.659 | -0.260 | -2.285 | 0.874 |
+| DriftxMinVar+Regime | 2.582 | -0.247 | -2.157 | 0.835 |
 | Equal weight | 2.281 | 0.725 | -1.671 | 1.410 |
-| MomentumxMaxSharpe+Regime | 2.218 | -0.204 | -2.315 | 0.506 |
-| MomentumxMinVar+Regime | 2.203 | -0.171 | -2.285 | 0.515 |
-| NonexMaxSharpe+Regime | 2.227 | -0.264 | -2.160 | 0.563 |
-| NonexMinVar+Regime | 2.180 | -0.198 | -1.587 | 1.076 |
+| MomentumxMaxSharpe+Regime | 2.252 | -0.228 | -2.327 | 0.531 |
+| MomentumxMinVar+Regime | 2.251 | -0.216 | -2.294 | 0.543 |
+| NonexMaxSharpe+Regime | 2.228 | -0.264 | -2.149 | 0.574 |
+| NonexMinVar+Regime | 2.178 | -0.197 | -1.587 | 1.077 |
 
 Max drawdown by regime (regime days concatenated):
 
@@ -177,9 +177,9 @@ Max drawdown by regime (regime days concatenated):
 | DriftxMaxSharpe+Regime | -5.4% | -10.7% | -39.9% | -12.8% |
 | DriftxMinVar+Regime | -5.1% | -9.7% | -38.3% | -12.6% |
 | Equal weight | -6.2% | -10.6% | -45.8% | -15.5% |
-| MomentumxMaxSharpe+Regime | -7.5% | -11.2% | -41.7% | -15.6% |
-| MomentumxMinVar+Regime | -7.4% | -10.9% | -41.3% | -15.4% |
-| NonexMaxSharpe+Regime | -5.7% | -9.3% | -39.5% | -13.7% |
+| MomentumxMaxSharpe+Regime | -7.5% | -11.2% | -41.5% | -15.6% |
+| MomentumxMinVar+Regime | -7.4% | -10.9% | -41.1% | -15.4% |
+| NonexMaxSharpe+Regime | -5.7% | -9.3% | -39.4% | -13.7% |
 | NonexMinVar+Regime | -3.6% | -5.9% | -31.3% | -8.3% |
 
 ### Gate 3 checks for every primary strategy
@@ -187,29 +187,29 @@ Max drawdown by regime (regime days concatenated):
 | strategy | regime | days | strategy_sharpe | ew_sharpe | strategy_mdd | ew_mdd | mdd_within_tolerance | reduces_drawdown_vs_ew |
 |---|---|---|---|---|---|---|---|---|
 | NonexMinVar+Regime | Crisis | 338 | -1.587 | -1.671 | -31.3% | -45.8% | yes | yes |
-| NonexMinVar+Regime | Correction | 427 | -0.198 | 0.725 | -5.9% | -10.6% | yes | yes |
-| NonexMinVar+Regime | Bull | 643 | 2.180 | 2.281 | -3.6% | -6.2% | yes | yes |
-| NonexMinVar+Regime | Neutral | 500 | 1.076 | 1.410 | -8.3% | -15.5% | yes | yes |
-| NonexMaxSharpe+Regime | Crisis | 338 | -2.160 | -1.671 | -39.5% | -45.8% | yes | yes |
+| NonexMinVar+Regime | Correction | 427 | -0.197 | 0.725 | -5.9% | -10.6% | yes | yes |
+| NonexMinVar+Regime | Bull | 643 | 2.178 | 2.281 | -3.6% | -6.2% | yes | yes |
+| NonexMinVar+Regime | Neutral | 500 | 1.077 | 1.410 | -8.3% | -15.5% | yes | yes |
+| NonexMaxSharpe+Regime | Crisis | 338 | -2.149 | -1.671 | -39.4% | -45.8% | yes | yes |
 | NonexMaxSharpe+Regime | Correction | 427 | -0.264 | 0.725 | -9.3% | -10.6% | yes | yes |
-| NonexMaxSharpe+Regime | Bull | 643 | 2.227 | 2.281 | -5.7% | -6.2% | yes | yes |
-| NonexMaxSharpe+Regime | Neutral | 500 | 0.563 | 1.410 | -13.7% | -15.5% | yes | yes |
-| MomentumxMinVar+Regime | Crisis | 338 | -2.285 | -1.671 | -41.3% | -45.8% | yes | yes |
-| MomentumxMinVar+Regime | Correction | 427 | -0.171 | 0.725 | -10.9% | -10.6% | yes | no |
-| MomentumxMinVar+Regime | Bull | 643 | 2.203 | 2.281 | -7.4% | -6.2% | yes | no |
-| MomentumxMinVar+Regime | Neutral | 500 | 0.515 | 1.410 | -15.4% | -15.5% | yes | yes |
-| MomentumxMaxSharpe+Regime | Crisis | 338 | -2.315 | -1.671 | -41.7% | -45.8% | yes | yes |
-| MomentumxMaxSharpe+Regime | Correction | 427 | -0.204 | 0.725 | -11.2% | -10.6% | yes | no |
-| MomentumxMaxSharpe+Regime | Bull | 643 | 2.218 | 2.281 | -7.5% | -6.2% | yes | no |
-| MomentumxMaxSharpe+Regime | Neutral | 500 | 0.506 | 1.410 | -15.6% | -15.5% | yes | no |
-| DriftxMinVar+Regime | Crisis | 338 | -2.158 | -1.671 | -38.3% | -45.8% | yes | yes |
-| DriftxMinVar+Regime | Correction | 427 | -0.245 | 0.725 | -9.7% | -10.6% | yes | yes |
-| DriftxMinVar+Regime | Bull | 643 | 2.581 | 2.281 | -5.1% | -6.2% | yes | yes |
-| DriftxMinVar+Regime | Neutral | 500 | 0.792 | 1.410 | -12.6% | -15.5% | yes | yes |
-| DriftxMaxSharpe+Regime | Crisis | 338 | -2.288 | -1.671 | -39.9% | -45.8% | yes | yes |
-| DriftxMaxSharpe+Regime | Correction | 427 | -0.247 | 0.725 | -10.7% | -10.6% | yes | no |
-| DriftxMaxSharpe+Regime | Bull | 643 | 2.654 | 2.281 | -5.4% | -6.2% | yes | yes |
-| DriftxMaxSharpe+Regime | Neutral | 500 | 0.867 | 1.410 | -12.8% | -15.5% | yes | yes |
+| NonexMaxSharpe+Regime | Bull | 643 | 2.228 | 2.281 | -5.7% | -6.2% | yes | yes |
+| NonexMaxSharpe+Regime | Neutral | 500 | 0.574 | 1.410 | -13.7% | -15.5% | yes | yes |
+| MomentumxMinVar+Regime | Crisis | 338 | -2.294 | -1.671 | -41.1% | -45.8% | yes | yes |
+| MomentumxMinVar+Regime | Correction | 427 | -0.216 | 0.725 | -10.9% | -10.6% | yes | no |
+| MomentumxMinVar+Regime | Bull | 643 | 2.251 | 2.281 | -7.4% | -6.2% | yes | no |
+| MomentumxMinVar+Regime | Neutral | 500 | 0.543 | 1.410 | -15.4% | -15.5% | yes | yes |
+| MomentumxMaxSharpe+Regime | Crisis | 338 | -2.327 | -1.671 | -41.5% | -45.8% | yes | yes |
+| MomentumxMaxSharpe+Regime | Correction | 427 | -0.228 | 0.725 | -11.2% | -10.6% | yes | no |
+| MomentumxMaxSharpe+Regime | Bull | 643 | 2.252 | 2.281 | -7.5% | -6.2% | yes | no |
+| MomentumxMaxSharpe+Regime | Neutral | 500 | 0.531 | 1.410 | -15.6% | -15.5% | yes | no |
+| DriftxMinVar+Regime | Crisis | 338 | -2.157 | -1.671 | -38.3% | -45.8% | yes | yes |
+| DriftxMinVar+Regime | Correction | 427 | -0.247 | 0.725 | -9.7% | -10.6% | yes | yes |
+| DriftxMinVar+Regime | Bull | 643 | 2.582 | 2.281 | -5.1% | -6.2% | yes | yes |
+| DriftxMinVar+Regime | Neutral | 500 | 0.835 | 1.410 | -12.6% | -15.5% | yes | yes |
+| DriftxMaxSharpe+Regime | Crisis | 338 | -2.285 | -1.671 | -39.9% | -45.8% | yes | yes |
+| DriftxMaxSharpe+Regime | Correction | 427 | -0.260 | 0.725 | -10.7% | -10.6% | yes | no |
+| DriftxMaxSharpe+Regime | Bull | 643 | 2.659 | 2.281 | -5.4% | -6.2% | yes | yes |
+| DriftxMaxSharpe+Regime | Neutral | 500 | 0.874 | 1.410 | -12.8% | -15.5% | yes | yes |
 
 ![strategy NAV](figures/phase2_nav_posttax.png)
 
@@ -229,7 +229,7 @@ Max drawdown by regime (regime days concatenated):
 | primary (IRX cash, FIFO, monthly) | 60/40 VanEck | 0.489 | 0.298 | 5.6% | -25.3% | 22.2% | 2.489 |
 | plan-literal cash 4% flat | Equal weight | 0.436 | 0.252 | 6.9% | -28.6% | 20.9% | 2.544 |
 | plan-literal cash 4% flat | 60/40 VanEck | 0.362 | 0.173 | 5.6% | -25.3% | 22.2% | 2.489 |
-| HIFO lot relief | Equal weight | 0.554 | 0.427 | 7.8% | -28.5% | 20.9% | 1.559 |
+| HIFO lot relief | Equal weight | 0.554 | 0.427 | 7.8% | -28.5% | 20.9% | 1.558 |
 | HIFO lot relief | 60/40 VanEck | 0.489 | 0.356 | 6.4% | -23.3% | 22.2% | 1.541 |
 | no distribution tax | Equal weight | 0.554 | 0.436 | 8.0% | -28.6% | 20.9% | 1.702 |
 | no distribution tax | 60/40 VanEck | 0.489 | 0.360 | 6.5% | -24.6% | 22.2% | 1.760 |

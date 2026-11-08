@@ -1,21 +1,24 @@
-"""Golden regression: the refactored engine must reproduce the committed main-study numbers."""
-from pathlib import Path
-
-import pandas as pd
+"""Golden regression: key numbers may only change together with a visible input change."""
 import pytest
 
-from vaneck import data, study
+from vaneck import data, golden
 from vaneck.config import RAW_DIR
 
-GOLDEN = Path(__file__).with_name("golden_gate1_baselines_summary.csv")
-COLS = ["cagr_pre", "cagr_post", "sharpe_pre", "sharpe_post", "mdd_post", "turnover_pre", "cost_bps_yr", "tax_pct_yr"]
+pytestmark = pytest.mark.skipif(not (RAW_DIR / "SMH.csv").exists() or not (golden.GOLDEN_DIR / "manifest.json").exists(),
+                                reason="raw data cache or golden files not present")
 
 
-@pytest.mark.skipif(not (RAW_DIR / "SMH.csv").exists(), reason="raw data cache not present")
-def test_baselines_match_golden():
+def test_golden_inputs_unchanged():
+    manifest, _ = golden.load()
+    changed = golden.inputs_changed(manifest)
+    assert not changed, ("inputs changed since the goldens were frozen: " + "; ".join(changed)
+                         + ". Review the change, then run `python -m vaneck golden --update` and commit the diff.")
+
+
+def test_golden_results_match():
+    manifest, frames = golden.load()
+    if golden.inputs_changed(manifest):
+        pytest.skip("inputs changed; test_golden_inputs_unchanged reports it")
     md = data.build_market_data()
-    splits = study.make_splits(md)
-    runs = study.run_baselines(md, splits)
-    got = study.summary_table(runs)[COLS]
-    want = pd.read_csv(GOLDEN, index_col=0)[COLS].loc[got.index]
-    pd.testing.assert_frame_equal(got.astype(float), want.astype(float), rtol=1e-6, atol=1e-9)
+    problems = golden.compare(golden.compute(md), frames)
+    assert not problems, "engine regression (inputs unchanged but results differ):\n" + "\n".join(problems)

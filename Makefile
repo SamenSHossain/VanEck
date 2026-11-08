@@ -1,4 +1,4 @@
-.PHONY: test lint check report replay rebalance monitor
+.PHONY: test lint typecheck check cross report extensions golden replay rebalance monitor status history dashboard docker
 
 test:
 	python -m pytest -q
@@ -20,3 +20,27 @@ rebalance:
 
 monitor:
 	python -m vaneck monitor --strategy EqualWeight --mark
+
+typecheck:
+	mypy
+
+cross:
+	python -m vaneck fetch --secondary && python -m vaneck check --cross
+
+extensions:
+	python -m vaneck extensions
+
+golden:
+	python -m vaneck golden
+
+status:
+	python -m vaneck status
+
+history:
+	python -m vaneck history --last 30
+
+dashboard:
+	python -m vaneck dashboard
+
+docker:
+	docker build -t vaneck . && docker run --rm vaneck check

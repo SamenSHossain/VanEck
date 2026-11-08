@@ -53,7 +53,7 @@ def data_hash(raw_dir: Path = RAW_DIR) -> str:
 
 
 def package_versions() -> dict:
-    out = {"python": platform.python_version()}
+    out: dict[str, str | None] = {"python": platform.python_version()}
     for name in ("numpy", "pandas", "scipy", "yfinance", "matplotlib"):
         try:
             out[name] = __import__(name).__version__

@@ -1,0 +1,8 @@
+state/
+reports/
+paper/
+.git/
+__pycache__/
+.pytest_cache/
+.hypothesis/
+*.egg-info/

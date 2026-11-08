@@ -19,8 +19,12 @@ jobs:
       - run: pip install -r requirements.txt ruff
       - name: lint
         run: ruff check vaneck tests
-      - name: unit tests (incl. lookahead and reconciliation)
+      - name: type check
+        run: mypy
+      - name: unit, property, adversarial and golden tests
         run: python -m pytest -q
+      - name: cross-validation against the cached secondary sources
+        run: python -m vaneck check --cross --json > /tmp/health.json || test $? -ne 2
       - name: deterministic dry-run decision on the committed data cache
         run: |
           python -m vaneck rebalance --strategy EqualWeight --as-of 2024-12-31 \

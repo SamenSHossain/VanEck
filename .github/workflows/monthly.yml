@@ -19,9 +19,9 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: refresh data cache
-        run: python -m vaneck fetch --force
+        run: python -m vaneck fetch --force --secondary
       - name: data health gate
-        run: python -m vaneck check --json
+        run: python -m vaneck check --json --cross
       - name: dry-run decision (latest bar)
         run: python -m vaneck --log-json rebalance --strategy EqualWeight --init-cash 10000000
       - name: monitor the paper book
