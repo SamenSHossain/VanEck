@@ -27,7 +27,7 @@ def test_rules_fire_as_pre_registered():
     assert by["R1_monthly_returns"].status == "ok" and by["R2_drawdown"].status == "ok"
     assert by["R3_rolling_sharpe"].status == "insufficient" and by["R4_engine_agreement"].status == "insufficient"
     assert retire.overall(res) == "ok"
-    bad = _curve([0.01, -0.06, 0.0, -0.07, 0.01, -0.08, 0.0, 0.01])   # 3 of the last 6 below -5%
+    bad = _curve([0.01, 0.0, -0.06, 0.0, -0.07, 0.01, -0.08, 0.0])   # 3 of the last 6 months below -5%
     res = retire.evaluate(bad, rf, EXP, monitor_history=[])
     assert {r.rule: r.status for r in res}["R1_monthly_returns"] == "retire"
     deep = _curve([0.02, -0.30, 0.01])
