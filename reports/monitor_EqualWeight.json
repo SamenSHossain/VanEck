@@ -49,6 +49,47 @@
     "2024-11-29"
   ],
   "days_since_last_decision": 32,
+  "retirement": {
+    "status": "ok",
+    "rules": [
+      {
+        "rule": "R1_monthly_returns",
+        "status": "ok",
+        "value": 0,
+        "threshold": "3 of 6 below p5",
+        "detail": "0 of the last 6 months below the backtest 5th percentile (-4.97%)"
+      },
+      {
+        "rule": "R2_drawdown",
+        "status": "ok",
+        "value": -0.0692,
+        "threshold": -0.356,
+        "detail": "worst drawdown -6.9% vs retire level -35.6% (1.25 x backtest -28.5%)"
+      },
+      {
+        "rule": "R3_rolling_sharpe",
+        "status": "insufficient",
+        "value": 1,
+        "threshold": 3,
+        "detail": "needs 14 months of marks"
+      },
+      {
+        "rule": "R4_engine_agreement",
+        "status": "ok",
+        "value": 0,
+        "threshold": "2 consecutive",
+        "detail": "no persistent engine alert"
+      },
+      {
+        "rule": "R5_implementability",
+        "status": "insufficient",
+        "value": 2,
+        "threshold": 3,
+        "detail": "needs three monitor runs"
+      }
+    ],
+    "expectations_frozen_utc": "2026-11-08T21:58:20Z"
+  },
   "alerts": [
     "implementation gap vs intended targets +1.25% exceeds 1.01%: risk controls or fills are moving the book away from the research portfolio"
   ],

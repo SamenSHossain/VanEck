@@ -248,6 +248,18 @@ class TaxLedger:
         if self.tax_dist:
             self.dist_income_by_year[date.year] += dollars
 
+    def transfer_out(self, ticker: str, units: float) -> None:
+        """Remove units pro rata across lots without realising anything (position break adopted from the broker)."""
+        lots = self.lots[ticker]
+        total = sum(lot.units for lot in lots)
+        if total <= 0 or units <= 0:
+            return
+        frac = min(units / total, 1.0)
+        for lot in lots:
+            lot.basis *= 1.0 - frac
+            lot.units *= 1.0 - frac
+        self.lots[ticker] = [lot for lot in lots if lot.units > 1e-12]
+
     def income(self, date: pd.Timestamp, dollars: float) -> None:
         """Cash distribution (paper broker): taxable income, no basis change."""
         if dollars > 0 and self.tax_dist:

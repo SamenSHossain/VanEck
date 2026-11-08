@@ -50,11 +50,25 @@ def test_rebalance_dry_run_then_submit_then_duplicate(synth, tmp_path):
     d = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig, dry_run=True, limits=LOOSE)
     assert d["status"] == "dry_run" and not d["fills"] and d["executed_weights"] is None
     assert (dec_dir / f"{sig.date()}_EqualWeight_dry_run.json").exists()
-    d2 = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig, dry_run=False, limits=LOOSE)
-    assert d2["status"] == "submitted" and len(d2["fills"]) == 9
+    # submission is gated on an approval of the dry run (hash of targets and orders)
+    from vaneck import approvals
+    d_un = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig, dry_run=False, limits=LOOSE,
+                          approvals_dir=tmp_path / "appr", state_dir=tmp_path / "state")
+    assert d_un["status"] == "unapproved" and not d_un["fills"]
+    approvals.approve(d, "alice", tmp_path / "appr")
+    d2 = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig, dry_run=False, limits=LOOSE,
+                        approvals_dir=tmp_path / "appr", state_dir=tmp_path / "state")
+    assert d2["status"] == "submitted" and len(d2["fills"]) == 9 and "alice" in d2["approval"]
     assert abs(sum(d2["executed_weights"].values()) - 1.0) < 0.02
-    d3 = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig, dry_run=False, limits=LOOSE)
+    d3 = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig, dry_run=False, limits=LOOSE,
+                        approvals_dir=tmp_path / "appr", state_dir=tmp_path / "state")
     assert d3["status"] == "duplicate" and not d3["fills"]
+    # the halt flag refuses submissions
+    approvals.set_halt(True, "test", "bob", tmp_path / "state" / "HALT", tmp_path / "state" / "halt.log")
+    sig_b = md.index[-10]
+    d4 = live.rebalance(md, "EqualWeight", br, dec_dir, as_of=sig_b, dry_run=False, limits=LOOSE,
+                        approvals_dir=tmp_path / "appr", state_dir=tmp_path / "state")
+    assert d4["status"] == "halted"
     rec = json.loads((dec_dir / f"{sig.date()}_EqualWeight_submitted.json").read_text())
     assert rec["manifest"]["config_hash"] and rec["health"]["status"] in ("ok", "warn")
 

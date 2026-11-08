@@ -287,3 +287,26 @@ Rules (all fixed now):
 * **Monitor.** The reconciliation adds a third research line that applies the
   participation cap to the intended targets; the remaining gap to the paper
   book should be whole-share rounding only.
+
+## 17. Retirement rules for a paper or live portfolio (pre-registered before evaluation)
+
+A deployed portfolio is switched off by rules fixed in advance, not by
+judgement after a bad month. Expectation bands come from the research engine
+run over the main study window (2017-06-01 to 2024-12-31) with the same
+strategy and execution policy, pre-tax, and are frozen once per deployment
+(`python -m vaneck expectations`). They are never updated with live data.
+
+| Rule | Input | Trigger | Consequence |
+|---|---|---|---|
+| R1 realised returns | monthly return of the book | below the backtest's 5th percentile of monthly returns in 3 of the last 6 months | **retire** |
+| R2 drawdown | drawdown from the book's peak | worse than 1.25 x the backtest's maximum drawdown | **retire** |
+| R3 risk-adjusted | rolling 12-month Sharpe of the book | below the backtest's 5th percentile of rolling 12-month Sharpe for 3 consecutive months | review |
+| R4 engine agreement | monitor's executed-weights reconciliation | beyond tolerance on 2 consecutive monitor runs | **halt** (engine or data fault, not the strategy) |
+| R5 implementability | monitor's capped-intended reconciliation | beyond tolerance on 3 consecutive monitor runs | review |
+
+"Retire" and "halt" write a flag the decision pipeline reads: new risk is
+refused (sell-only decisions remain possible) until a human clears the flag
+with a recorded reason. "Review" raises an alert and is recorded. A rule that
+has fewer observations than it needs reports "insufficient history" and does
+not fire. With the paper rehearsal (12 months) R1 and R2 can fire; R3 needs at
+least 14 months of marks.

@@ -40,6 +40,18 @@ Alerts:
 | research_intended_capped_costs_dollars | 8599.3626 |
 | paper_costs_dollars | 8355.0592 |
 
+## retirement rules (SPEC s.17)
+
+Overall: **OK**
+
+| rule | status | value | threshold | detail |
+|---|---|---|---|---|
+| R1_monthly_returns | ok | 0 | 3 of 6 below p5 | 0 of the last 6 months below the backtest 5th percentile (-4.97%) |
+| R2_drawdown | ok | -0.0692 | -0.356 | worst drawdown -6.9% vs retire level -35.6% (1.25 x backtest -28.5%) |
+| R3_rolling_sharpe | insufficient | 1 | 3 | needs 14 months of marks |
+| R4_engine_agreement | ok | 0 | 2 consecutive | no persistent engine alert |
+| R5_implementability | insufficient | 2 | 3 | needs three monitor runs |
+
 ## decisions
 
 | status | count |

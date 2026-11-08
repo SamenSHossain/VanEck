@@ -28,7 +28,7 @@ capacity under the pre-registered limits is about $3M.
 
 ```bash
 pip install -r requirements.txt
-make test            # 79 tests: lookahead + leak canary, property-based ledger/planner, golden regression, tax lots, risk, reconciliation
+make test            # 92 tests: lookahead + leak canary, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
 make lint            # ruff
 make typecheck       # mypy
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
@@ -40,7 +40,7 @@ make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes rep
 |---|---|---|
 | **Research** | Pre-registered walk-forward study: data, lookahead guard, cost and tax models, baselines, locked strategies, Bonferroni-corrected tests, regime analysis, gates; extensions: execution-policy ladder, power/HAC/deflated-Sharpe/Romano-Wolf, capacity curve | `config` `data` `calendar` `universe` `costs` `tax` `execution` `portfolio` `baselines` `regimes` `signals` `optimizers` `strategies` `stats` `metrics` `study` `report` `taxaware` `design` `liquidity` `extensions` |
 | **Infrastructure** | Reliable, observable runs: run manifests (git SHA, config hash, data hash), data health gate with exit codes, cross-validation against FRED and peers plus a corporate-actions audit, golden results coupled to input hashes, property-based and adversarial tests, SQLite history with alerts and a status page, structured logs, mypy, CI on every push, scheduled monthly cycle | `audit` `health` `sources` `crossval` `golden` `store` `notify` `dashboard` `cli` `.github/workflows` |
-| **Trading** | Disciplined decisions: explicit pre-trade risk limits, idempotent decision records, paper broker with real share/dividend/split mechanics, monitor that reconciles paper against research and raises alerts | `risk` `broker` `live` `monitor` |
+| **Trading** | Disciplined decisions: explicit pre-trade risk limits, idempotent decision records, paper broker with real share/dividend/split mechanics, a venue adapter (Alpaca) with an order state machine and shadow-ledger reconciliation, approvals as code (halt flag, signed decision approvals, two-person limit changes), pre-registered retirement rules, order working under the participation cap, monitor that reconciles paper against research | `risk` `broker` `alpaca` `livebroker` `reconcile` `approvals` `retire` `live` `monitor` |
 
 The operational layer is exercised with equal weight as a benchmark control,
 because no rule earned deployment. See [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
@@ -56,7 +56,11 @@ for the runbook.
 | `python -m vaneck check [--json] [--cross]` | data health report; `--cross` adds FRED agreement, peer divergence and the corporate-actions audit; exit code 2 on a blocking problem |
 | `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
 | `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
-| `python -m vaneck status` / `history` / `dashboard` | latest state (exit 1 if blocked or alerting), the run timeline, and `reports/dashboard.html` |
+| `python -m vaneck status` / `history` / `dashboard` | latest state (exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
+| `python -m vaneck approve <run_id> --by NAME` / `halt on|off --reason R` / `limits show|propose|approve` | approvals as code: a dry run must be approved before `--submit`; global halt; two-person risk-limit changes |
+| `python -m vaneck broker check` / `reconcile [--adopt]` / `rebalance --broker alpaca --submit` | venue connectivity, shadow-vs-venue reconciliation, execution at Alpaca with the local book as shadow ledger |
+| `python -m vaneck expectations --strategy S` / `retire show|clear` | freeze retirement expectation bands (SPEC s.17); inspect or clear a retirement flag |
+| `python -m vaneck work --parent <run_id> --as-of D [--submit]` | work the capped residual of a submitted decision on a later day |
 | `python -m vaneck paper init|status|reset` | manage the paper book |
 | `python -m vaneck extensions` | the three pre-registered extensions; writes `reports/EXTENSIONS.md` |
 | `python -m vaneck rebalance --strategy S [--as-of D] [--submit] [--policy P2]` | one decision: health, targets, orders, risk checks, decision record; dry run unless `--submit`; optional execution policy P0-P3 |
@@ -107,15 +111,20 @@ vaneck/
   health.py      data health checks with block/warn severities
   risk.py        pre-trade risk limits, order construction, risk report
   broker.py      Broker protocol and the paper broker (shares, cash, dividends, splits, fills)
-  live.py        idempotent rebalance decision pipeline, decision records, replay
-  monitor.py     paper-vs-research reconciliation and alerts
+  alpaca.py      Alpaca REST adapter: MOC orders, client-id idempotency, polling, order state records
+  livebroker.py  venue execution + local shadow ledger with reconciliation before and after decisions
+  reconcile.py   position/cash break detection and reports
+  approvals.py   halt flag, HMAC-signed decision approvals, two-person risk-limit changes
+  retire.py      expectation bands and pre-registered retirement rules R1-R5, flags
+  live.py        idempotent decision pipeline (health, targets, orders, risk, approvals, record), replay, work
+  monitor.py     paper-vs-research reconciliation, implementability gap, retirement evaluation, alerts
   cli.py         python -m vaneck ...
-tests/           79 tests across all layers incl. hypothesis property tests, a leak canary and goldens
+tests/           92 tests across all layers incl. hypothesis property tests, a leak canary, goldens and a fake venue
 data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes
 data/secondary/  FRED series for cross-validation
 docs/            the plan, the pre-registered SPEC, the operations runbook
 reports/         REPORT.md, FINDINGS.md, tables/*.csv, figures/*.png, gates.json, run_manifest.json, monitor_*.md
-paper/           paper book and decision records from the 2024 rehearsal and the latest dry run
+paper/           paper book and decisions from the 2024 rehearsal, the latest dry run, and demo/ (approve -> submit -> work -> halt)
 .github/         ci.yml (lint, mypy, tests, cross-check, dry-run decision), monthly.yml (scheduled cycle)
 Dockerfile       image that runs the suite at build and defaults to `vaneck check`
 ```

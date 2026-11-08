@@ -11,7 +11,6 @@ import pandas as pd
 from . import audit, data, health, live, monitor, report, study
 from .broker import PaperBroker
 from .config import REPORT_DIR, SPEC
-from .risk import RiskLimits
 from .universe import run_gate0
 
 log = logging.getLogger("vaneck")
@@ -303,7 +302,11 @@ def setup_logging(as_json: bool = False, level: str = "INFO") -> None:
 def _print_decision(d: dict) -> None:
     print(f"decision {d['run_id']}: {d['strategy']} signal {d['signal_date']} exec {d['exec_date']} "
           f"regime {d['regime']} -> {d['status'].upper()} (health {d['health']['status']}, risk {d['risk']['status']})")
-    print(f"  equity {d['equity']:,.0f}  cash {d['cash']:,.0f}")
+    print(f"  equity {d['equity']:,.0f}  cash {d['cash']:,.0f}  decision hash {d.get('decision_hash')}"
+          + (f"  approval: {d['approval']}" if d.get("approval") else ""))
+    if d.get("reconcile"):
+        print(f"  reconciliation: {d['reconcile']['status']} ({len(d['reconcile']['breaks'])} breaks, "
+              f"cash diff {d['reconcile']['cash_diff']:+,.2f})")
     print("  targets: " + ", ".join(f"{k} {100 * v:.1f}%" for k, v in d["targets"].items()))
     for c in d["risk"]["checks"]:
         if c["status"] != "pass":
@@ -375,6 +378,20 @@ def cmd_paper(args):
     return 1
 
 
+def _make_broker(args, md):
+    """paper: the simulated book; alpaca: the venue for execution with the local book as shadow ledger."""
+    shadow = PaperBroker(Path(args.book), md)
+    if getattr(args, "broker", "paper") == "paper":
+        return shadow
+    from .alpaca import AlpacaBroker, AlpacaClient
+    from .livebroker import LiveBroker
+    client = AlpacaClient()
+    if not client.configured:
+        raise SystemExit("Alpaca credentials missing: set APCA_API_KEY_ID and APCA_API_SECRET_KEY "
+                         "(and APCA_API_BASE_URL for live instead of paper)")
+    return LiveBroker(AlpacaBroker(client), shadow, md, adopt_breaks=bool(getattr(args, "adopt_breaks", False)))
+
+
 def _policy(name: str | None):
     if not name:
         return None
@@ -386,16 +403,21 @@ def _policy(name: str | None):
 
 
 def cmd_rebalance(args):
+    from .approvals import load_limits
     md = data.build_market_data()
-    broker = PaperBroker(Path(args.book), md)
+    broker = _make_broker(args, md)
     split = live.decision_split(md, args.as_of)
     if not broker.initialized:
         if args.init_cash is None:
             print("paper book not initialised: run `paper init` or pass --init-cash")
             return 1
-        broker.init(args.init_cash, split.signal_date)
+        target_book = broker.shadow if hasattr(broker, "shadow") else broker
+        target_book.init(args.init_cash, split.signal_date)
+    limits, why = load_limits()
+    print("risk limits:", why)
     d = live.rebalance(md, args.strategy, broker, Path(args.decisions), as_of=args.as_of,
-                       dry_run=not args.submit, force=args.force, limits=RiskLimits(), policy=_policy(args.policy))
+                       dry_run=not args.submit, force=args.force, limits=limits, policy=_policy(args.policy),
+                       approvals_dir=Path(args.approvals))
     _print_decision(d)
     st = _store()
     st.record_decision(d)
@@ -405,7 +427,7 @@ def cmd_rebalance(args):
                 else f"{d['strategy']} {d['signal_date']} {d['status']}",
                 payload={"run_id": d["run_id"], "health": d["health"]["status"], "risk": d["risk"]["status"]}, store=st)
     st.close()
-    return {"dry_run": 0, "submitted": 0, "blocked": 2}.get(d["status"], 1)
+    return {"dry_run": 0, "submitted": 0, "blocked": 2, "halted": 2, "unapproved": 3}.get(d["status"], 1)
 
 
 def cmd_replay(args):
@@ -432,9 +454,10 @@ def cmd_monitor(args):
         return 1
     if args.mark:
         broker.advance_to(md.index[-1])
-    rep = monitor.monitor(md, broker, Path(args.decisions), args.strategy, out_dir=Path(args.out))
-    print(monitor.monitor_markdown(rep))
     st = _store()
+    history = [json.loads(r["payload"]) for r in st.recent("monitor", 10) if r["strategy"] == args.strategy]
+    rep = monitor.monitor(md, broker, Path(args.decisions), args.strategy, out_dir=Path(args.out), monitor_history=history)
+    print(monitor.monitor_markdown(rep))
     st.record_monitor(rep)
     if rep.get("alerts"):
         _notify("monitor", "alert", f"{args.strategy}: " + " | ".join(rep["alerts"]),
@@ -474,7 +497,15 @@ def cmd_status(args):
     print("health:  ", h_line)
     print("decision:", d_line)
     print("monitor: ", m_line)
-    bad = bool((h and h["status"] == "block") or (d and d["status"] == "blocked") or (m and m["status"] == "alert"))
+    from .approvals import is_halted
+    from .retire import flag_path
+    from .store import STATE_DIR
+    halted = is_halted()
+    flags = sorted(p.name for p in STATE_DIR.glob("RETIRED_*.json"))
+    print("halt:    ", f"HALTED by {halted['by']} at {halted['at']}: {halted['reason']}" if halted else "clear")
+    print("retired: ", ", ".join(flags) if flags else "none", "" if flags else f"(flags live under {flag_path('x').parent})")
+    bad = bool((h and h["status"] == "block") or (d and d["status"] in ("blocked", "halted")) or (m and m["status"] == "alert")
+               or halted or flags)
     st.close()
     return 1 if bad else 0
 
@@ -486,6 +517,119 @@ def cmd_dashboard(args):
     st.close()
     print(f"dashboard written to {out}")
     return 0
+
+
+def cmd_approve(args):
+    from . import approvals
+    d = live.load_decision(Path(args.decisions), args.run_id)
+    if d["status"] != "dry_run":
+        print(f"decision {args.run_id} is {d['status']}; only dry-run decisions are approved")
+        return 1
+    rec = approvals.approve(d, args.by, Path(args.approvals))
+    print(f"approved {d['strategy']} {d['signal_date']} (hash {rec['decision_hash']}) by {rec['by']} at {rec['at']}"
+          + ("" if rec["signature"] else " [unsigned: no VANECK_APPROVAL_KEY]"))
+    print(f"submit with: python -m vaneck rebalance --strategy '{d['strategy']}' --as-of {d['signal_date']} --submit")
+    return 0
+
+
+def cmd_halt(args):
+    from . import approvals
+    rec = approvals.set_halt(args.state == "on", args.reason, args.by)
+    print("HALT", "set" if rec["halted"] else "cleared", f"by {rec['by']}: {rec['reason']}")
+    return 0
+
+
+def _parse_kv(items):
+    out = {}
+    for it in items or []:
+        k, v = it.split("=", 1)
+        v = v.strip()
+        out[k.strip()] = (v.lower() == "true") if v.lower() in ("true", "false") else (int(v) if v.isdigit() else float(v))
+    return out
+
+
+def cmd_limits(args):
+    from . import approvals
+    if args.action == "show":
+        lim, why = approvals.load_limits()
+        print(why)
+        for k, v in lim.__dict__.items():
+            print(f"  {k} = {v}")
+        return 0
+    if args.action == "propose":
+        rec = approvals.propose_limits(_parse_kv(args.set), args.by)
+        print(f"proposed {rec['changes']} by {rec['proposed_by']}; "
+              "a second, different approver must run `limits approve --by NAME`")
+        return 0
+    rec = approvals.approve_limits(args.by)
+    print("activated" if rec.get("activated") else rec.get("note", "recorded; still waiting for a second approver"))
+    return 0
+
+
+def cmd_broker(args):
+    from .alpaca import AlpacaBroker, AlpacaClient
+    client = AlpacaClient()
+    if not client.configured:
+        print("Alpaca credentials missing: set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
+        return 1
+    print(json.dumps(AlpacaBroker(client).check(), indent=2, default=str))
+    return 0
+
+
+def cmd_reconcile(args):
+    from .alpaca import AlpacaBroker, AlpacaClient
+    from .livebroker import LiveBroker
+    md = data.build_market_data()
+    client = AlpacaClient()
+    if not client.configured:
+        print("Alpaca credentials missing: set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
+        return 1
+    shadow = PaperBroker(Path(args.book), md)
+    if not shadow.initialized:
+        print("no shadow book; run `paper init` first")
+        return 1
+    lb = LiveBroker(AlpacaBroker(client), shadow, md, adopt_breaks=args.adopt)
+    rep = lb.sync(md.index[-1])
+    print(rep.to_markdown())
+    audit.write_json(REPORT_DIR / f"reconcile_{rep.as_of}.json", rep.to_dict())
+    st = _store()
+    if not rep.clean:
+        _notify("reconcile", "block", f"{len(rep.breaks)} position break(s), cash diff {rep.cash_diff:+,.2f}", store=st)
+    st.close()
+    return 0 if rep.clean else 2
+
+
+def cmd_expectations(args):
+    from . import retire
+    md = data.build_market_data()
+    exp = retire.freeze_expectations(md, args.strategy, Path(args.out), policy=_policy(args.policy))
+    print(json.dumps(exp, indent=2))
+    return 0
+
+
+def cmd_retire(args):
+    from . import retire
+    if args.action == "clear":
+        retire.clear_flag(args.strategy, args.by or "operator", args.reason or "")
+        print("flag cleared")
+        return 0
+    flag = retire.is_retired(args.strategy)
+    print(json.dumps(flag, indent=2) if flag else f"{args.strategy}: no retirement flag")
+    return 0
+
+
+def cmd_work(args):
+    from .approvals import load_limits
+    md = data.build_market_data()
+    broker = _make_broker(args, md)
+    limits, why = load_limits()
+    d = live.work(md, args.parent, broker, Path(args.decisions), as_of=args.as_of, dry_run=not args.submit,
+                  limits=limits, policy=_policy(args.policy))
+    _print_decision(d)
+    st = _store()
+    st.record_decision(d)
+    st.close()
+    return 0 if d["status"] in ("dry_run", "submitted") else 1
 
 
 def cmd_golden(args):
@@ -545,7 +689,11 @@ def main(argv=None) -> int:
     pp.add_argument("--mark", action="store_true", help="roll the book to the latest bar")
     pp.set_defaults(func=cmd_paper)
 
+    appr_default = str(live.PAPER_DIR / "approvals")
     r = sub.add_parser("rebalance", help="one decision: health -> targets -> orders -> risk -> record (dry run unless --submit)")
+    r.add_argument("--broker", choices=["paper", "alpaca"], default="paper")
+    r.add_argument("--adopt-breaks", action="store_true", help="adopt venue positions as transfers when reconciliation breaks")
+    r.add_argument("--approvals", default=appr_default)
     r.add_argument("--strategy", default="EqualWeight")
     r.add_argument("--as-of", default=None, help="signal date (default: latest bar)")
     r.add_argument("--submit", action="store_true", help="execute against the paper book")
@@ -584,6 +732,51 @@ def main(argv=None) -> int:
     db.add_argument("--book", default=book_default)
     db.add_argument("--out", default=str(REPORT_DIR / "dashboard.html"))
     db.set_defaults(func=cmd_dashboard)
+
+    ap = sub.add_parser("approve", help="approve a dry-run decision so it may be submitted (recorded; signed if a key is set)")
+    ap.add_argument("run_id")
+    ap.add_argument("--by", default=None)
+    ap.add_argument("--decisions", default=dec_default)
+    ap.add_argument("--approvals", default=appr_default)
+    ap.set_defaults(func=cmd_approve)
+    ha = sub.add_parser("halt", help="set or clear the global halt flag (submissions refused while set)")
+    ha.add_argument("state", choices=["on", "off"])
+    ha.add_argument("--reason", required=True)
+    ha.add_argument("--by", default=None)
+    ha.set_defaults(func=cmd_halt)
+    li = sub.add_parser("limits", help="risk limits in force; changes need two different approvers")
+    li.add_argument("action", choices=["show", "propose", "approve"])
+    li.add_argument("--set", nargs="*", help="field=value pairs for propose")
+    li.add_argument("--by", default=None)
+    li.set_defaults(func=cmd_limits)
+    bc = sub.add_parser("broker", help="check connectivity and account state at the venue")
+    bc.add_argument("action", choices=["check"])
+    bc.set_defaults(func=cmd_broker)
+    rc = sub.add_parser("reconcile", help="reconcile the shadow book against the venue (exit 2 on breaks)")
+    rc.add_argument("--book", default=book_default)
+    rc.add_argument("--adopt", action="store_true")
+    rc.set_defaults(func=cmd_reconcile)
+    exq = sub.add_parser("expectations", help="freeze the retirement-rule expectation bands for a strategy (SPEC s.17)")
+    exq.add_argument("--strategy", default="EqualWeight")
+    exq.add_argument("--policy", default=None)
+    exq.add_argument("--out", default=str(live.PAPER_DIR))
+    exq.set_defaults(func=cmd_expectations)
+    rt = sub.add_parser("retire", help="show or clear a strategy's retirement flag")
+    rt.add_argument("action", choices=["show", "clear"])
+    rt.add_argument("--strategy", default="EqualWeight")
+    rt.add_argument("--by", default=None)
+    rt.add_argument("--reason", default=None)
+    rt.set_defaults(func=cmd_retire)
+    wk = sub.add_parser("work", help="work the capped residual of a submitted decision on a later day")
+    wk.add_argument("--parent", required=True, help="run id of the submitted decision")
+    wk.add_argument("--as-of", default=None)
+    wk.add_argument("--submit", action="store_true")
+    wk.add_argument("--broker", choices=["paper", "alpaca"], default="paper")
+    wk.add_argument("--adopt-breaks", action="store_true")
+    wk.add_argument("--book", default=book_default)
+    wk.add_argument("--decisions", default=dec_default)
+    wk.add_argument("--policy", default=None)
+    wk.set_defaults(func=cmd_work)
 
     g = sub.add_parser("golden", help="check (or --update) the frozen key results against the current engine and inputs")
     g.add_argument("--update", action="store_true")

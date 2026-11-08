@@ -171,8 +171,76 @@ class PaperBroker:
             b["peak_equity"] = max(float(b["peak_equity"]), eq)
         self.save()
 
+    # -- shadow-ledger operations (used when a remote venue executes) ------------ #
+    def apply_fills(self, fills: list[Fill], date, lot_plans: dict[str, list[tuple[int, float]] | None] | None = None) -> None:
+        """Record fills executed elsewhere: positions, cash, lots. Costs are whatever the venue reported."""
+        b = self._require()
+        date = pd.Timestamp(date)
+        pos = b["positions"]
+        lot_plans = lot_plans or {}
+        for f in fills:
+            if f.side == "BUY":
+                b["cash"] -= f.notional + f.cost
+                pos[f.ticker] = pos.get(f.ticker, 0.0) + f.shares
+                self.ledger.buy(f.ticker, date, f.shares, f.notional)
+            else:
+                held = pos.get(f.ticker, 0.0)
+                shares = min(f.shares, held)
+                b["cash"] += f.notional - f.cost
+                pos[f.ticker] = held - shares
+                plan = lot_plans.get(f.ticker)
+                if plan is not None:
+                    from .risk import truncate_lot_plan
+                    plan = truncate_lot_plan(plan, shares)
+                self.ledger.sell(f.ticker, date, shares, f.notional * (shares / f.shares if f.shares else 1.0), lot_plan=plan)
+                if abs(pos[f.ticker]) < 1e-9:
+                    del pos[f.ticker]
+            b["fills"].append(asdict(f))
+        if date > self.as_of:
+            b["as_of"] = str(date.date())
+        self.save()
+
+    def mark(self, date, equity: float) -> None:
+        """Mark the book with an externally observed equity (the venue's account value)."""
+        b = self._require()
+        date = pd.Timestamp(date)
+        b["marks"][str(date.date())] = float(equity)
+        b["peak_equity"] = max(float(b["peak_equity"]), float(equity))
+        if date > self.as_of:
+            b["as_of"] = str(date.date())
+        self.save()
+
+    def adopt(self, positions: dict[str, float], cash: float, date, note: str = "") -> dict:
+        """Align the shadow book with the venue, treating differences as transfers (nothing realised)."""
+        b = self._require()
+        date = pd.Timestamp(date)
+        px = self.prices(date)
+        pos = b["positions"]
+        adjustments = {}
+        for sym in sorted(set(pos) | set(positions)):
+            want, have = float(positions.get(sym, 0.0)), float(pos.get(sym, 0.0))
+            diff = want - have
+            if abs(diff) < 1e-9:
+                continue
+            price = float(px.get(sym, float("nan")))
+            if diff > 0:
+                self.ledger.buy(sym, date, diff, diff * (price if price == price else 0.0))
+            else:
+                self.ledger.transfer_out(sym, -diff)
+            if abs(want) < 1e-9:
+                pos.pop(sym, None)
+            else:
+                pos[sym] = want
+            adjustments[sym] = diff
+        cash_diff = float(cash) - float(b["cash"])
+        b["cash"] = float(cash)
+        b["cash_flows"].append({"date": str(date.date()), "ticker": "", "type": "adjustment", "amount": cash_diff,
+                                "positions": adjustments, "note": note})
+        self.save()
+        return {"positions": adjustments, "cash": cash_diff}
+
     # -- execution ------------------------------------------------------------- #
-    def submit(self, orders: list[Order], date) -> list[Fill]:
+    def submit(self, orders: list[Order], date, run_id: str | None = None) -> list[Fill]:
         """Fill ``orders`` at the close of ``date`` (a trading day in the data)."""
         b = self._require()
         date = pd.Timestamp(date)

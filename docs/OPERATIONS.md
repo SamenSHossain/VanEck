@@ -153,3 +153,71 @@ decision and any monitor alert are delivered to the webhook in
 `make typecheck` runs mypy (CI does too); `pip install -e .` provides the
 `vaneck` console command; `make docker` builds an image that runs the test
 suite at build time and defaults to the health check.
+
+## Connecting a venue
+
+`--broker alpaca` on `rebalance` and `work` executes at Alpaca (paper by
+default; `APCA_API_BASE_URL` selects live) while the local book stays the
+**shadow ledger** for lots, wash-sale state and history. Credentials are read
+from `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` on the operator's machine;
+nothing in the repository stores them. Orders are market-on-close, carry a
+`client_order_id` derived from the decision run id (a resubmission is adopted,
+never duplicated), and are polled to a terminal state; every transition is kept
+in the decision record under `venue_orders`.
+
+Before every decision the shadow is **reconciled** against the venue
+(positions share by share, cash within 0.1% of equity). A break blocks the
+decision; `python -m vaneck reconcile` prints the break report and
+`--adopt` (or `--adopt-breaks` on `rebalance`) records the venue state as a
+transfer so nothing is realised. `python -m vaneck broker check` verifies
+connectivity and account status.
+
+The adapter is tested against an in-process fake of the Alpaca endpoints
+(`tests/fake_alpaca.py`): immediate, delayed and partial fills, duplicate
+client ids, rejections, and the end-to-end decision with a reconciliation
+break.
+
+## Approvals as code
+
+- **Halt flag.** `python -m vaneck halt on --reason ...` writes `state/HALT`;
+  every submission is refused with status `halted` until `halt off`. Both are
+  logged with operator and time.
+- **Approved decisions.** `--submit` requires an approval of the dry run:
+  `python -m vaneck approve <run_id> --by NAME` records a hash of the strategy,
+  signal date, targets and post-risk orders. On submit the pipeline recomputes
+  the decision for the same signal date and refuses (`unapproved`) if the hash
+  differs or no approval exists. With `VANECK_APPROVAL_KEY` set, approvals are
+  HMAC-signed and tampering is detected; `VANECK_REQUIRE_SIGNED=1` rejects
+  unsigned approvals. Rehearsal replays and order-working children do not
+  require a separate approval (the children only move toward already-approved
+  targets).
+- **Two-person limits.** Risk limits in force are the defaults unless
+  `state/limits.json` carries two valid approvals by different people:
+  `limits propose --set max_participation=0.15 --by alice`, then
+  `limits approve --by bob`. `limits show` prints what is in force and why.
+
+## Retirement rules (SPEC section 17)
+
+`python -m vaneck expectations --strategy S [--policy P2]` freezes the
+expectation bands from the research engine over the study window. From then on
+every `monitor` run evaluates R1 to R5 and records the verdict; `retire` and
+`halt` verdicts write `state/RETIRED_<strategy>.json`, after which the pipeline
+removes buy orders (sell-only) and reports `retired` when nothing remains.
+`python -m vaneck retire show|clear --by NAME --reason ...` inspects or clears
+the flag with a logged reason.
+
+## Working capped orders
+
+When the participation cap scales an order, the decision record keeps the
+requested size. `python -m vaneck work --parent <run_id> --as-of <later day>
+[--submit]` re-targets only the capped tickers toward the parent's approved
+targets under the same cap, as a child decision linked to the parent. Repeat
+daily until the residual is gone or the next monthly decision supersedes it.
+
+## Worked example
+
+`paper/demo/` holds a chronological run on the paper book: a dry run for the
+2024-10-31 signal, its approval by `alice`, the approved submission (HAP, PFXF
+and REMX scaled by the participation cap), two `work` children on the next two
+days that keep buying the HAP residual at 10% of its volume, and a submission
+refused by the halt flag set by `bob`.

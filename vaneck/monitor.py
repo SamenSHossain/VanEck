@@ -29,8 +29,14 @@ def _decisions(decisions_dir: Path, strategy: str) -> list[dict]:
 
 def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: str, spec: Spec = SPEC,
             limits: RiskLimits = RiskLimits(), cost_model: CostModel | None = None,
-            tracking_tolerance_per_year: float = 0.01, out_dir: Path = REPORT_DIR) -> dict:
+            tracking_tolerance_per_year: float = 0.01, out_dir: Path = REPORT_DIR,
+            monitor_history: list[dict] | None = None, expectations_dir: Path | None = None,
+            state_dir: Path | None = None) -> dict:
+    from . import retire
+    from .store import STATE_DIR
     cost_model = cost_model or CostModel(spec)
+    state_dir = state_dir or STATE_DIR
+    expectations_dir = expectations_dir or decisions_dir.parent
     curve = broker.equity_curve()
     rf = md.cash_yield(spec)
     book = broker._require()
@@ -99,6 +105,9 @@ def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: 
             if label == "intended" and abs(cum) > tol:
                 alerts.append(f"implementation gap vs intended targets {cum:+.2%} exceeds {tol:.2%}: "
                               "risk controls or fills are moving the book away from the research portfolio")
+            if label == "intended_capped" and abs(cum) > tol:
+                alerts.append(f"implementability gap {cum:+.2%} exceeds {tol:.2%}: "
+                              "even with the participation cap applied in research the book cannot track the targets")
         rec["paper_costs_dollars"] = broker.realized_costs()
         rep["reconciliation"] = rec
 
@@ -115,6 +124,19 @@ def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: 
         rep["days_since_last_decision"] = int(gap)
         if gap > 40:
             alerts.append(f"no decision for {gap} days")
+    # -- pre-registered retirement rules (SPEC s.17) ------------------------------ #
+    exp = retire.load_expectations(strategy, expectations_dir)
+    if exp is not None:
+        results = retire.evaluate(curve, rf, exp, monitor_history=monitor_history or [])
+        verdict = retire.overall(results)
+        rep["retirement"] = {**retire.results_to_dict(results), "expectations_frozen_utc": exp.get("frozen_utc")}
+        for r in results:
+            if r.status in ("review", "retire", "halt"):
+                alerts.append(f"retirement rule {r.rule} -> {r.status.upper()}: {r.detail}")
+        if verdict in ("retire", "halt"):
+            retire.set_flag(strategy, verdict, results, state_dir)
+    else:
+        rep["retirement"] = {"status": "no expectations frozen", "rules": []}
     rep["alerts"] = alerts
     rep["status"] = "alert" if alerts else "ok"
 
@@ -134,6 +156,12 @@ def monitor_markdown(rep: dict) -> str:
             for k, v in rep[section].items():
                 lines.append(f"| {k} | {v:.4f} |" if isinstance(v, float) else f"| {k} | {v} |")
             lines.append("")
+    if rep.get("retirement", {}).get("rules"):
+        lines += ["## retirement rules (SPEC s.17)", "", f"Overall: **{rep['retirement']['status'].upper()}**", "",
+                  "| rule | status | value | threshold | detail |", "|---|---|---|---|---|"]
+        for r in rep["retirement"]["rules"]:
+            lines.append(f"| {r['rule']} | {r['status']} | {r['value']} | {r['threshold']} | {r['detail']} |")
+        lines.append("")
     lines += ["## decisions", "", "| status | count |", "|---|---|"]
     lines += [f"| {k} | {v} |" for k, v in rep.get("decisions", {}).items()]
     if rep.get("participation_scaled_rebalances"):
