@@ -12,6 +12,7 @@ from .broker import PaperBroker
 from .config import REPORT_DIR, SPEC, Spec
 from .costs import CostModel
 from .data import MarketData
+from .execution import ExecutionPolicy
 from .portfolio import simulate
 from .risk import RiskLimits
 from .study import TRADEABLES
@@ -64,19 +65,23 @@ def monitor(md: MarketData, broker: PaperBroker, decisions_dir: Path, strategy: 
     # -- reconciliation with the research engine over the same decisions ---------- #
     # (1) mechanical: research engine fed the weights actually executed -> should agree tightly
     # (2) implementation gap: research engine fed the intended targets -> cost of the risk controls
-    def _research(weight_key: str):
+    def _research(weight_key: str, policy: ExecutionPolicy | None = None):
         rows = {pd.Timestamp(d["exec_date"]): d[weight_key] for d in submitted if d.get(weight_key)}
         if not rows:
             return None
-        tg = pd.DataFrame(rows).T.reindex(columns=TRADEABLES).fillna(0.0).sort_index()
+        cols = [c for c in TRADEABLES] + [c for c in md.adj_close.columns if c not in TRADEABLES]
+        tg = pd.DataFrame(rows).T.reindex(columns=cols).fillna(0.0).sort_index()
+        tg = tg.loc[:, (tg != 0).any(axis=0) | tg.columns.isin(TRADEABLES)]
         return simulate(md, tg, spec=spec, taxed=False, cost_model=cost_model, end=curve.index[-1],
-                        initial=float(broker.book["initial_cash"]), name=weight_key)
+                        initial=float(broker.book["initial_cash"]), name=weight_key, policy=policy)
 
     if submitted:
         tol = tracking_tolerance_per_year * years
         rec = {"tolerance": tol, "paper_total_return": float(curve.iloc[-1] / curve.iloc[0] - 1)}
-        for key, label in (("executed_weights", "executed"), ("targets", "intended")):
-            research = _research(key)
+        capped = ExecutionPolicy(name="capped", max_participation=limits.max_participation)
+        for key, label, pol in (("executed_weights", "executed", None), ("targets", "intended", None),
+                                ("targets", "intended_capped", capped)):
+            research = _research(key, pol)
             if research is None:
                 continue
             joined = pd.concat([curve, research.nav.rename("nav")], axis=1).dropna()

@@ -1,4 +1,12 @@
 {
+  "AGG": {
+    "fetched_utc": "2026-11-08T20:37:49Z",
+    "file": "AGG.csv",
+    "first": "2003-09-29",
+    "last": "2026-11-06",
+    "rows": 5815,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
   "ANGL": {
     "fetched_utc": "2026-11-07T21:01:35Z",
     "file": "ANGL.csv",
@@ -13,6 +21,22 @@
     "first": "2007-04-10",
     "last": "2026-11-06",
     "rows": 4928,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "FALN": {
+    "fetched_utc": "2026-11-08T20:37:43Z",
+    "file": "FALN.csv",
+    "first": "2016-06-21",
+    "last": "2026-11-06",
+    "rows": 2611,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "FLOT": {
+    "fetched_utc": "2026-11-08T20:37:45Z",
+    "file": "FLOT.csv",
+    "first": "2011-06-17",
+    "last": "2026-11-06",
+    "rows": 3871,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
   "FLTR": {
@@ -31,12 +55,44 @@
     "rows": 5149,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
+  "GNR": {
+    "fetched_utc": "2026-11-08T20:37:44Z",
+    "file": "GNR.csv",
+    "first": "2010-09-14",
+    "last": "2026-11-06",
+    "rows": 4063,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
   "HAP": {
     "fetched_utc": "2026-11-07T21:01:35Z",
     "file": "HAP.csv",
     "first": "2008-11-11",
     "last": "2026-11-06",
     "rows": 4525,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "IAU": {
+    "fetched_utc": "2026-11-08T20:37:48Z",
+    "file": "IAU.csv",
+    "first": "2005-01-28",
+    "last": "2026-11-06",
+    "rows": 5479,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "IEI": {
+    "fetched_utc": "2026-11-08T20:37:50Z",
+    "file": "IEI.csv",
+    "first": "2007-01-11",
+    "last": "2026-11-06",
+    "rows": 4988,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "IVV": {
+    "fetched_utc": "2026-11-08T20:37:49Z",
+    "file": "IVV.csv",
+    "first": "2000-05-19",
+    "last": "2026-11-06",
+    "rows": 6657,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
   "MOAT": {
@@ -55,12 +111,36 @@
     "rows": 3139,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
+  "PFF": {
+    "fetched_utc": "2026-11-08T20:37:48Z",
+    "file": "PFF.csv",
+    "first": "2007-03-30",
+    "last": "2026-11-06",
+    "rows": 4934,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
   "PFXF": {
     "fetched_utc": "2026-11-07T21:01:36Z",
     "file": "PFXF.csv",
     "first": "2012-07-19",
     "last": "2026-11-06",
     "rows": 3597,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "PICK": {
+    "fetched_utc": "2026-11-08T20:37:44Z",
+    "file": "PICK.csv",
+    "first": "2012-02-02",
+    "last": "2026-11-06",
+    "rows": 3713,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "QUAL": {
+    "fetched_utc": "2026-11-08T20:37:42Z",
+    "file": "QUAL.csv",
+    "first": "2013-07-18",
+    "last": "2026-11-06",
+    "rows": 3348,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
   "REMX": {
@@ -71,12 +151,28 @@
     "rows": 4031,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
+  "RING": {
+    "fetched_utc": "2026-11-08T20:37:43Z",
+    "file": "RING.csv",
+    "first": "2012-02-02",
+    "last": "2026-11-06",
+    "rows": 3713,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
   "SMH": {
     "fetched_utc": "2026-11-07T21:01:34Z",
     "file": "SMH.csv",
     "first": "2000-06-05",
     "last": "2026-11-06",
     "rows": 6647,
+    "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
+  },
+  "SOXX": {
+    "fetched_utc": "2026-11-08T20:37:42Z",
+    "file": "SOXX.csv",
+    "first": "2001-07-13",
+    "last": "2026-11-06",
+    "rows": 6368,
     "source": "yfinance Ticker.history(period='max', auto_adjust=False)"
   },
   "SPY": {

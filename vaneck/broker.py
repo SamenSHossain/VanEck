@@ -19,7 +19,9 @@ import pandas as pd
 from .config import SPEC, Spec
 from .costs import CostModel
 from .data import MarketData
+from .execution import HoldingView
 from .risk import Order
+from .tax import TaxLedger
 
 
 @dataclass
@@ -47,6 +49,8 @@ class PaperBroker:
         self.spec = spec
         self.cost_model = cost_model or CostModel(spec)
         self.book: dict | None = json.loads(self.path.read_text()) if self.path.exists() else None
+        has_tax = bool(self.book) and "tax" in self.book
+        self.ledger = TaxLedger.from_dict(self.book["tax"], spec) if has_tax else TaxLedger(spec, taxed=True)
         self._adv = None
 
     # -- lifecycle ------------------------------------------------------------ #
@@ -65,11 +69,21 @@ class PaperBroker:
             "peak_equity": float(cash),
             "data_vintage": data_vintage or str(self.md.index[-1].date()),
         }
+        self.ledger = TaxLedger(self.spec, taxed=True)
         self.save()
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.book["tax"] = self.ledger.to_dict()
+        self.book["realized_by_year"] = {str(k): v for k, v in self.ledger.realized_by_year.items()}
+        self.book["tax_liability_accrued"] = self.ledger.accrued_liability()
         self.path.write_text(json.dumps(self.book, indent=2, default=str))
+
+    def holding_views(self, date=None) -> dict[str, HoldingView]:
+        px = self.prices(date)
+        return {t: HoldingView(t, float(px[t]), self.ledger.lot_views(t), self.ledger.last_buy.get(t),
+                               self.ledger.last_loss_sale.get(t))
+                for t, sh in self.positions().items() if sh > 0}
 
     def _require(self) -> dict:
         if self.book is None:
@@ -141,11 +155,14 @@ class PaperBroker:
                 if div > 0:
                     amt = sh * div
                     b["cash"] += amt
+                    self.ledger.income(d, amt)
                     b["cash_flows"].append({"date": str(d.date()), "ticker": t, "type": "dividend", "amount": amt})
                 if self.md.splits is not None and d > vintage:
                     r = float(self.md.splits.at[d, t]) if t in self.md.splits.columns else 0.0
                     if r > 0:
                         pos[t] = sh * r
+                        for lot in self.ledger.lots[t]:
+                            lot.units *= r
                         b["cash_flows"].append({"date": str(d.date()), "ticker": t, "type": "split", "ratio": r})
             b["as_of"] = str(d.date())
             eq = self.equity(d)
@@ -183,9 +200,11 @@ class PaperBroker:
             if o.side == "BUY":
                 b["cash"] -= notional + cost
                 pos[o.ticker] = pos.get(o.ticker, 0.0) + shares
+                self.ledger.buy(o.ticker, date, shares, notional)
             else:
                 b["cash"] += notional - cost
                 pos[o.ticker] = pos.get(o.ticker, 0.0) - shares
+                self.ledger.sell(o.ticker, date, shares, notional, lot_plan=o.lot_plan)
                 if abs(pos[o.ticker]) < 1e-9:
                     del pos[o.ticker]
             f = Fill(date=str(date.date()), ticker=o.ticker, side=o.side, shares=shares, price=price,

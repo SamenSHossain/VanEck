@@ -1,6 +1,6 @@
 {
-  "run_id": "20261107T225936Z-0ecf69",
-  "created_utc": "2026-11-07T22:59:36Z",
+  "run_id": "20261108T205150Z-cdc0ec",
+  "created_utc": "2026-11-08T20:51:50Z",
   "strategy": "EqualWeight",
   "status": "submitted",
   "signal_date": "2023-12-29",
@@ -8,6 +8,7 @@
   "regime": "Bull",
   "equity": 10000000.0,
   "cash": 10000000.0,
+  "policy": null,
   "current_weights": {
     "ANGL": 0.110317,
     "FLTR": 0.110318,
@@ -100,7 +101,7 @@
         "status": "ok",
         "value": 0.0,
         "limit": 3,
-        "detail": "fetched 2026-11-07 21:01Z"
+        "detail": "fetched 2026-11-08 20:37Z"
       },
       {
         "name": "signal_history",
@@ -180,6 +181,8 @@
         "price": 28.780001,
         "adv": 46218937.96080833,
         "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 1109987.08,
         "participation": 0.024
       },
@@ -190,6 +193,8 @@
         "price": 25.15,
         "adv": 13850940.869188335,
         "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 1109995.25,
         "participation": 0.0801
       },
@@ -200,6 +205,8 @@
         "price": 31.01,
         "adv": 712698610.7570599,
         "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 1109971.94,
         "participation": 0.0016
       },
@@ -210,6 +217,8 @@
         "price": 48.810001,
         "adv": 1369114.5678666667,
         "note": "scaled from 22741 to 2804 shares (participation 81.1% > 10%)",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 136863.24,
         "participation": 0.1
       },
@@ -220,6 +229,8 @@
         "price": 84.870003,
         "adv": 86841167.18337665,
         "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 1109929.9,
         "participation": 0.0128
       },
@@ -230,6 +241,8 @@
         "price": 19.959999,
         "adv": 22243584.752576668,
         "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 1109995.5,
         "participation": 0.0499
       },
@@ -240,6 +253,8 @@
         "price": 17.18,
         "adv": 8099642.805061666,
         "note": "scaled from 64610 to 47145 shares (participation 13.7% > 10%)",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 809951.1,
         "participation": 0.1
       },
@@ -250,6 +265,8 @@
         "price": 61.549999,
         "adv": 6816064.366868333,
         "note": "scaled from 18034 to 11074 shares (participation 16.3% > 10%)",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 681604.69,
         "participation": 0.1
       },
@@ -260,6 +277,8 @@
         "price": 174.869995,
         "adv": 1264661182.232025,
         "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
         "notional": 1109899.86,
         "participation": 0.0009
       }
@@ -353,8 +372,8 @@
     "9 fills at the 2024-01-02 close"
   ],
   "manifest": {
-    "run_id": "20261107T225936Z-0ecf69",
-    "created_utc": "2026-11-07T22:59:36Z",
+    "run_id": "20261108T205150Z-cdc0ec",
+    "created_utc": "2026-11-08T20:51:50Z",
     "command": "rebalance",
     "argv": [
       "replay",
@@ -366,12 +385,12 @@
       "2024-12-31"
     ],
     "git": {
-      "sha": "7e4ff7118a60b30929f432f66fb5573d4c9f9f12",
+      "sha": "5c1d3be649e31a0a5557287ab772e129e1a4f497",
       "dirty": true,
       "branch": "claude/dazzling-dirac-6vvbh2"
     },
-    "config_hash": "0b9048a66047e9e3",
-    "data_hash": "2b04507c506df358",
+    "config_hash": "e691fafac8d70a1e",
+    "data_hash": "ab858d0ef71cb3ad",
     "versions": {
       "python": "3.13.18",
       "numpy": "2.5.3",

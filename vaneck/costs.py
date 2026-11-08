@@ -44,18 +44,29 @@ class CostModel:
             bps += self.impact * (100.0 * abs(notional) / adv_dollars)
         return bps
 
-    def trade_cost(self, ticker: str, notional: float, adv_dollars: float) -> float:
+    def impact_bps(self, notional: float, adv_dollars: float, daily_vol: float | None) -> float:
+        """Square-root market impact (SPEC s.16): coef x daily vol (bps) x sqrt(notional / ADV)."""
+        if not self.spec.impact_coef or daily_vol is None or not adv_dollars or adv_dollars <= 0 or pd.isna(daily_vol):
+            return 0.0
+        return self.spec.impact_coef * daily_vol * 1e4 * (abs(float(notional)) / adv_dollars) ** 0.5
+
+    def trade_cost(self, ticker: str, notional: float, adv_dollars: float, daily_vol: float | None = None) -> float:
         """Dollar cost of trading ``notional`` dollars (either direction)."""
         n = abs(float(notional))
         if n <= 0.0:
             return 0.0
-        return n * self.one_way_bps(ticker, adv_dollars, n) / 1e4 + self.spec.fee_per_trade
+        bps = self.one_way_bps(ticker, adv_dollars, n) + self.impact_bps(n, adv_dollars, daily_vol)
+        return n * bps / 1e4 + self.spec.fee_per_trade
 
     # -- data helpers -------------------------------------------------------- #
     def adv_table(self, md: MarketData) -> pd.DataFrame:
         """Trailing average dollar volume, lagged one day (known at the signal date)."""
         dv = md.dollar_volume()
         return dv.rolling(self.spec.adv_lookback, min_periods=20).mean().shift(1)
+
+    def vol_table(self, md: MarketData) -> pd.DataFrame:
+        """Trailing daily return volatility, lagged one day (known at the signal date)."""
+        return md.returns().rolling(self.spec.adv_lookback, min_periods=20).std(ddof=1).shift(1)
 
     def cost_table(self, md: MarketData, asof) -> pd.DataFrame:
         adv = self.adv_table(md).loc[:asof].iloc[-1]

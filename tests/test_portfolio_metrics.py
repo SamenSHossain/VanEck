@@ -10,7 +10,7 @@ from vaneck.costs import CostModel
 
 
 class ZeroCost(CostModel):
-    def trade_cost(self, ticker, notional, adv):
+    def trade_cost(self, ticker, notional, adv, daily_vol=None):
         return 0.0
 
 

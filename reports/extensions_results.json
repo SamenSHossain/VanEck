@@ -1,0 +1,41 @@
+{
+  "gate1_margin_by_policy": {
+    "P0 calendar, FIFO": 0.0706,
+    "P1 TAXOPT lots": 0.0719,
+    "P2 + drift band 20%": 0.083,
+    "P3 + loss harvesting": 0.0571
+  },
+  "gate1_pass_any_policy": false,
+  "white_rc_p_primary": 0.8235882058970515,
+  "white_rc_p_all": 0.35132433783108447,
+  "romano_wolf_rejections": [],
+  "capacity_aum": {
+    "EqualWeight": 3000000.0,
+    "60/40 VanEck (60% EW equity funds / 40% BND)": 3000000.0,
+    "DriftxMinVar": 0.0,
+    "MomentumxMaxSharpe": 0.0
+  },
+  "manifest": {
+    "run_id": "20261108T205628Z-3f1aed",
+    "created_utc": "2026-11-08T20:56:28Z",
+    "command": "extensions",
+    "argv": [
+      "extensions"
+    ],
+    "git": {
+      "sha": "5c1d3be649e31a0a5557287ab772e129e1a4f497",
+      "dirty": true,
+      "branch": "claude/dazzling-dirac-6vvbh2"
+    },
+    "config_hash": "e691fafac8d70a1e",
+    "data_hash": "ab858d0ef71cb3ad",
+    "versions": {
+      "python": "3.13.18",
+      "numpy": "2.5.3",
+      "pandas": "3.0.5",
+      "scipy": "1.18.1",
+      "yfinance": "1.8.0",
+      "matplotlib": "3.11.2"
+    }
+  }
+}

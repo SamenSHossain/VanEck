@@ -18,9 +18,10 @@ from .calendar import Split
 from .config import ROOT, SPEC, Spec
 from .costs import CostModel
 from .data import MarketData
+from .execution import ExecutionPolicy, plan
 from .health import HealthLimits, check_market_data
 from .regimes import regime_at
-from .risk import RiskLimits, orders_from_targets, pre_trade_checks
+from .risk import Order, RiskLimits, orders_from_targets, pre_trade_checks, truncate_lot_plan
 from .signals import SIGNALS
 from .strategies import OPTIMIZERS, make_strategy, strategy_name
 from .study import TRADEABLES
@@ -63,9 +64,33 @@ def find_decision(decisions_dir: Path, strategy: str, signal_date: pd.Timestamp,
     return p if p.exists() else None
 
 
+def orders_from_plan(date, targets: pd.Series, broker: PaperBroker, prices: pd.Series, adv: pd.Series,
+                     policy: ExecutionPolicy, limits: RiskLimits, spec: Spec = SPEC) -> list[Order]:
+    """Whole-share orders from the shared execution planner (same rules as the research engine)."""
+    cash = broker.cash() * (1.0 - limits.cost_reserve_bps / 1e4)
+    trades = plan(date, targets, broker.holding_views(date), cash, prices, policy, adv, spec.long_term_days)
+    orders = []
+    held = broker.positions()
+    for tr in trades:
+        px = float(prices[tr.ticker])
+        shares = abs(tr.dollars) / px
+        shares = shares if limits.allow_fractional else int(shares + 1e-9)
+        if tr.dollars < 0:
+            shares = min(shares, held.get(tr.ticker, 0.0))
+        if shares <= 0:
+            continue
+        a = float(adv.get(tr.ticker, float("nan")))
+        orders.append(Order(ticker=tr.ticker, side="BUY" if tr.dollars > 0 else "SELL", shares=shares, price=px,
+                            adv=None if a != a else a, reason=tr.reason,
+                            lot_plan=truncate_lot_plan(tr.lot_plan, shares) if tr.dollars < 0 else None,
+                            note="capped by planner" if tr.capped else ""))
+    return sorted(orders, key=lambda o: (o.side != "SELL", o.ticker))
+
+
 def rebalance(md: MarketData, strategy: str, broker: PaperBroker, decisions_dir: Path, spec: Spec = SPEC,
               limits: RiskLimits = RiskLimits(), as_of=None, dry_run: bool = True, force: bool = False,
-              now=None, health_limits: HealthLimits = HealthLimits(), cost_model: CostModel | None = None) -> dict:
+              now=None, health_limits: HealthLimits = HealthLimits(), cost_model: CostModel | None = None,
+              policy: ExecutionPolicy | None = None) -> dict:
     cost_model = cost_model or CostModel(spec)
     reg = strategy_registry(spec)
     if strategy not in reg:
@@ -87,7 +112,10 @@ def rebalance(md: MarketData, strategy: str, broker: PaperBroker, decisions_dir:
     prices = mdw.close.iloc[-1]
     equity = broker.equity(split.signal_date)
     adv = cost_model.adv_table(mdw).iloc[-1]
-    orders = orders_from_targets(targets, positions, prices, cash, adv, limits)
+    if policy is not None:
+        orders = orders_from_plan(split.signal_date, targets, broker, prices.dropna(), adv, policy, limits, spec)
+    else:
+        orders = orders_from_targets(targets, positions, prices, cash, adv, limits)
     staleness = int((now_ts.normalize() - split.signal_date.normalize()).days)
     est_bps = float(pd.Series([cost_model.one_way_bps(o.ticker, o.adv or 0.0) for o in orders]).mean()) if orders else 0.0
     risk = pre_trade_checks(orders, targets, equity, cash, est_cost_bps=est_bps, limits=limits, cap=cap,
@@ -117,7 +145,7 @@ def rebalance(md: MarketData, strategy: str, broker: PaperBroker, decisions_dir:
     decision = {
         "run_id": run_id, "created_utc": audit.utc_now(), "strategy": strategy, "status": status,
         "signal_date": str(split.signal_date.date()), "exec_date": str(split.exec_date.date()),
-        "regime": regime, "equity": equity, "cash": cash,
+        "regime": regime, "equity": equity, "cash": cash, "policy": None if policy is None else policy.name,
         "current_weights": {k: round(v, 6) for k, v in broker.weights(split.signal_date).items()},
         "targets": {k: round(v, 6) for k, v in targets.items() if v > 0},
         "executed_weights": executed,
@@ -136,7 +164,8 @@ def rebalance(md: MarketData, strategy: str, broker: PaperBroker, decisions_dir:
 
 
 def replay(md: MarketData, strategy: str, book_path: Path, decisions_dir: Path, start, end, cash: float,
-           spec: Spec = SPEC, limits: RiskLimits = RiskLimits(), cost_model: CostModel | None = None) -> list[dict]:
+           spec: Spec = SPEC, limits: RiskLimits = RiskLimits(), cost_model: CostModel | None = None,
+           policy: ExecutionPolicy | None = None) -> list[dict]:
     """Operational rehearsal: run the monthly cycle through the paper broker over a past window."""
     from .calendar import rebalance_schedule
     sched = rebalance_schedule(md.index, start, end, spec.exec_lag_days)
@@ -149,6 +178,6 @@ def replay(md: MarketData, strategy: str, book_path: Path, decisions_dir: Path, 
     out = []
     for _, row in sched.iterrows():
         out.append(rebalance(md, strategy, broker, decisions_dir, spec, limits, as_of=row["signal_date"],
-                             dry_run=False, cost_model=cost_model))
+                             dry_run=False, cost_model=cost_model, policy=policy))
     broker.advance_to(md.index[md.index <= pd.Timestamp(end)][-1])
     return out

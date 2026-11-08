@@ -25,6 +25,13 @@ COMMODITY_FUNDS: tuple[str, ...] = ("OUNZ",)
 # Auxiliary tradeable instruments (benchmarks / hedges), not part of the universe.
 AUX_TICKERS: tuple[str, ...] = ("SPY", "BND", "VGIT")
 
+# Tax-loss-harvesting substitutes (different issuer and index for every pair; SPEC section 14).
+SUBSTITUTES: dict[str, str] = {
+    "SMH": "SOXX", "MOAT": "QUAL", "GDX": "RING", "ANGL": "FALN", "REMX": "PICK", "HAP": "GNR",
+    "FLTR": "FLOT", "PFXF": "PFF", "OUNZ": "IAU", "SPY": "IVV", "BND": "AGG", "VGIT": "IEI",
+}
+SUBSTITUTE_TICKERS: tuple[str, ...] = tuple(SUBSTITUTES.values())
+
 # Macro series used only for regime classification and the risk-free rate.
 MACRO_TICKERS: dict[str, str] = {
     "spx": "^GSPC",     # S&P 500 index level
@@ -78,13 +85,16 @@ class Spec:
         (500e6, 2.0), (100e6, 4.0), (10e6, 10.0), (1e6, 20.0), (0.0, 40.0),
     )
     slippage_bps: float = 0.5            # one-way, on top of half the spread
+    impact_coef: float = 0.0             # square-root impact coefficient (0 = off, main study); 1.0 in SPEC s.16
     fee_per_trade: float = 0.001         # dollars, regulatory (plan)
     aum: float = 10e6                    # dollars, for per-trade fee scaling
     adv_lookback: int = 60
     # ---- taxes ----------------------------------------------------------- #
-    tax_rate: float = 0.37               # single rate on realized gains and distributions
+    tax_rate: float = 0.37               # rate on long-term gains and distributions
+    tax_rate_short: float | None = None  # short-term gains rate; None = same as tax_rate (plan)
+    long_term_days: int = 365
     tax_distributions: bool = True
-    lot_method: str = "FIFO"             # or "HIFO"
+    lot_method: str = "FIFO"             # FIFO | HIFO | TAXOPT
     wash_sale_days: int = 30
     wash_sale_groups: tuple[tuple[str, ...], ...] = ()  # substantially-identical groups
     # ---- regimes (locked; precedence = order below) ---------------------- #

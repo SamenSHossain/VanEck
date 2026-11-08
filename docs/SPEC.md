@@ -185,3 +185,105 @@ These govern the paper/live decision pipeline, not the research results.
 Monitoring tolerance: paper book versus research engine fed the executed
 weights must agree within 1% cumulative per year; the same tolerance applied
 to the intended targets flags an implementation gap rather than an engine fault.
+
+---
+
+# Pre-registered extensions (written before any extension backtest was run)
+
+Status: the main study is closed with Gate 1 failed. The three extensions
+below are new, pre-registered analyses motivated by the main study's findings
+(taxes dominate frictions; the annual test has no power; the participation
+limit binds). They do not reopen the gates; they answer three stated questions
+with thresholds fixed here first.
+
+## 14. Tax-aware execution (question: does execution policy change the Gate 1 verdict?)
+
+Policy ladder, applied identically to every portfolio and evaluated pre- and
+post-tax over the same OOS window (2017-06-01 to 2024-12-31):
+
+| Policy | Definition |
+|---|---|
+| P0 | monthly full rebalance to target, FIFO lots (the main study) |
+| P1 | P0 with TAXOPT lot selection |
+| P2 | P1 plus a relative drift band of 20% of target weight |
+| P3 | P2 plus tax-loss harvesting with the substitute map below |
+
+Rules (all fixed now):
+
+* **TAXOPT lot selection.** When selling, lots are relieved in this order:
+  lots with an unrealized loss (largest loss per unit first), then long-term
+  gain lots (smallest gain per unit first), then short-term gain lots (smallest
+  gain per unit first). Long term = held more than 365 days. Under the single
+  37% rate this is HIFO with a long-term preference.
+* **Drift band.** A position (or its exposure group, see harvesting) is traded
+  only when its weight is outside target x (1 +/- 0.20); it is then traded back
+  to target. If buys exceed the cash raised by sells plus existing cash, buys
+  are scaled down pro rata (no leverage, no forced gain realisation). Cash above
+  1% of equity is deployed to the most underweight groups toward target.
+* **Harvesting.** At each monthly decision, for every held fund, lots whose
+  unrealized loss is at least 5% of the lot's basis and at least 5 bps of
+  portfolio equity are sold, provided the fund was not bought in the previous
+  30 days. Proceeds buy the fund's substitute, which then serves the fund's
+  target as part of the same exposure group. A fund that was loss-sold is not
+  repurchased for 31 days. When the substitute itself qualifies for harvesting,
+  it is sold and the original fund is bought back (roles alternate).
+* **Substitute map** (different issuer and index for every pair): SMH->SOXX,
+  MOAT->QUAL, GDX->RING, ANGL->FALN, REMX->PICK, HAP->GNR, FLTR->FLOT,
+  PFXF->PFF, OUNZ->IAU, SPY->IVV, BND->AGG, VGIT->IEI. Physical gold trusts
+  (OUNZ/IAU) are the greyest pair under the substantially-identical standard; the
+  result is reported with and without that pair.
+* **Taxes.** Single 37% rate as in the main study. Sensitivity: short-term
+  gains at 46% (37% federal + 3.8% NIIT + about 5% state), long-term at 37%.
+* **Portfolios.** EqualWeight and 60/40 VanEck (the Gate 1 pair), 60/40
+  Classic (reference), DriftxMinVar without overlay (informational, the best
+  diagnostic rule).
+* **Pre-registered readout.** (a) The Gate 1 margin (EW post-tax Sharpe minus
+  60/40 VanEck post-tax Sharpe) under each policy; the verdict changes only if
+  the margin reaches 0.20 under a policy applied to both portfolios. (b) The
+  post-tax Sharpe gain of each policy over P0 for each portfolio. (c) Pre-tax
+  tracking error of P2/P3 against P0 (the exposure fidelity cost of trading less).
+
+## 15. Statistical design (question: what edge could the tests detect?)
+
+* **Power.** For a paired one-sided t-test, the minimum detectable effect at
+  80% power is computed from the noncentral t distribution using the observed
+  standard deviation of the difference series, at alpha 0.0083 (Bonferroni) and
+  0.05, for the annual series (n = 7) and the monthly series (n = 90). The
+  required sample size for the best diagnostic rule's observed effect is also
+  reported.
+* **HAC paired test.** Monthly differences versus 60/40 VanEck, Newey-West
+  standard errors with Bartlett kernel and lag floor(0.75 n^(1/3)), one-sided
+  p-value from t with n-1 degrees of freedom.
+* **Deflated Sharpe ratio** (Bailey and Lopez de Prado 2014) on monthly
+  excess returns for each strategy, with the number of trials N = 6 (primary set)
+  and N = 12 (including the no-overlay diagnostics); the expected maximum Sharpe
+  under the null uses the cross-sectional variance of the trials' Sharpe
+  ratios. The probabilistic Sharpe ratio of the strategy-minus-benchmark series
+  against a benchmark of zero is also reported.
+* **Romano-Wolf stepdown.** One-sided max-t stepdown over the monthly
+  difference series of all strategies in a family, circular block bootstrap
+  with block length 6 and 2000 draws, studentised statistics; families: the 6
+  primary strategies, and all 12. White's reality-check p-value is the adjusted
+  p of the best strategy.
+* **Status.** These are supplementary to the closed main study. For any future
+  study the proposal is that the monthly HAC test with Romano-Wolf control
+  replaces the annual Bonferroni test as the decisive one.
+
+## 16. Liquidity model (question: at what AUM do these portfolios stop being implementable?)
+
+* **Impact.** Square-root model: impact (bps) = 1.0 x daily volatility (bps)
+  x sqrt(order notional / trailing 60-day average dollar volume), added to the
+  spread and slippage cost for every fill. Daily volatility is the trailing
+  60-day standard deviation of returns known at the signal date.
+* **Participation cap.** No order may exceed 10% of trailing average dollar
+  volume; the residual is deferred (the next decision re-targets). This is the
+  same limit as the live risk control, so research and execution share it.
+* **Capacity curve.** Pre-tax runs at initial capital 1M, 3M, 10M, 30M, 100M,
+  300M, 1B dollars for EqualWeight, 60/40 VanEck, DriftxMinVar and
+  MomentumxMaxSharpe (the highest-turnover rule). Readouts: friction drag in
+  bps per year (spread + slippage + impact), and the annualised tracking error
+  against the same targets run frictionless and uncapped. Capacity is the
+  largest AUM with drag <= 25 bps per year and tracking error <= 50 bps per year.
+* **Monitor.** The reconciliation adds a third research line that applies the
+  participation cap to the intended targets; the remaining gap to the paper
+  book should be whole-share rounding only.

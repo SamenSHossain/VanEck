@@ -63,14 +63,24 @@ ranges, a last bar more than ten days old, or insufficient signal history.
 Warn: a daily move above 25%, zero volume on the last bar, a last bar more
 than five days old, a cache older than three days.
 
+## Execution policy
+
+`rebalance` and `replay` accept `--policy P0|P1|P2|P3` (SPEC section 14). The
+orders then come from the same planner the research simulator uses: TAXOPT lot
+relief (P1), a 20% relative drift band (P2), and loss harvesting into the
+pre-registered substitutes (P3). The paper book keeps tax lots, wash-sale
+state, realised gains by year and the accrued liability. Without `--policy`
+the legacy full rebalance applies.
+
 ## Monitoring (`vaneck/monitor.py`)
 
 - **Engine agreement.** The research simulator is fed the weights the paper
   book actually executed. The two curves should agree within 1% per year;
   a larger gap is an engine or data problem and raises an alert.
-- **Implementation gap.** The simulator is fed the intended targets. The
-  difference from the paper book is the cost of the risk controls and of
-  whole-share fills.
+- **Implementation gap.** The simulator is fed the intended targets, once
+  without and once with the live participation cap. The uncapped difference is
+  the cost of the risk controls; the capped difference should be whole-share
+  rounding and dividends held as cash (about -0.1% in the 2024 rehearsal).
 - **Book hygiene.** Current drawdown versus the halt level, blocked decisions,
   rebalances where orders were scaled, and days since the last decision.
 

@@ -342,6 +342,16 @@ def cmd_paper(args):
     return 1
 
 
+def _policy(name: str | None):
+    if not name:
+        return None
+    from .execution import presets
+    for label, pol in presets().items():
+        if label.split()[0].upper() == name.upper():
+            return pol
+    raise SystemExit(f"unknown policy {name}; choose P0, P1, P2 or P3")
+
+
 def cmd_rebalance(args):
     md = data.build_market_data()
     broker = PaperBroker(Path(args.book), md)
@@ -352,14 +362,15 @@ def cmd_rebalance(args):
             return 1
         broker.init(args.init_cash, split.signal_date)
     d = live.rebalance(md, args.strategy, broker, Path(args.decisions), as_of=args.as_of,
-                       dry_run=not args.submit, force=args.force, limits=RiskLimits())
+                       dry_run=not args.submit, force=args.force, limits=RiskLimits(), policy=_policy(args.policy))
     _print_decision(d)
     return {"dry_run": 0, "submitted": 0, "blocked": 2}.get(d["status"], 1)
 
 
 def cmd_replay(args):
     md = data.build_market_data()
-    decs = live.replay(md, args.strategy, Path(args.book), Path(args.decisions), args.start, args.end, cash=args.cash)
+    decs = live.replay(md, args.strategy, Path(args.book), Path(args.decisions), args.start, args.end, cash=args.cash,
+                       policy=_policy(args.policy))
     print(f"{len(decs)} decisions: " + ", ".join(f"{d['signal_date']} {d['status']}" for d in decs))
     broker = PaperBroker(Path(args.book), md)
     rep = monitor.monitor(md, broker, Path(args.decisions), args.strategy, out_dir=Path(args.out))
@@ -378,6 +389,15 @@ def cmd_monitor(args):
     rep = monitor.monitor(md, broker, Path(args.decisions), args.strategy, out_dir=Path(args.out))
     print(monitor.monitor_markdown(rep))
     return 1 if rep.get("alerts") else 0
+
+
+def cmd_extensions(args):
+    from . import extensions
+    md = data.build_market_data()
+    res = extensions.run_all(md, out=Path(args.out), n_boot=args.boot, plots=not args.no_plots)
+    print(json.dumps(res, indent=2, default=str))
+    print(f"report written to {Path(args.out) / 'EXTENSIONS.md'}")
+    return 0
 
 
 def main(argv=None) -> int:
@@ -424,6 +444,7 @@ def main(argv=None) -> int:
     r.add_argument("--book", default=book_default)
     r.add_argument("--decisions", default=dec_default)
     r.add_argument("--init-cash", type=float, default=None, help="initialise the paper book if missing")
+    r.add_argument("--policy", default=None, help="execution policy P0..P3 (SPEC s.14); default: legacy full rebalance")
     r.set_defaults(func=cmd_rebalance)
 
     rp = sub.add_parser("replay", help="operational rehearsal: monthly cycle through the paper broker over a past window")
@@ -434,6 +455,7 @@ def main(argv=None) -> int:
     rp.add_argument("--book", default=book_default)
     rp.add_argument("--decisions", default=dec_default)
     rp.add_argument("--out", default=str(REPORT_DIR))
+    rp.add_argument("--policy", default=None, help="execution policy P0..P3")
     rp.set_defaults(func=cmd_replay)
 
     mo = sub.add_parser("monitor", help="reconcile the paper book with the research engine and raise alerts (exit 1 on alerts)")
@@ -443,6 +465,12 @@ def main(argv=None) -> int:
     mo.add_argument("--out", default=str(REPORT_DIR))
     mo.add_argument("--mark", action="store_true", help="roll the book to the latest bar first")
     mo.set_defaults(func=cmd_monitor)
+
+    ex = sub.add_parser("extensions", help="pre-registered extensions: tax-aware execution, statistical design, capacity")
+    ex.add_argument("--out", default=str(REPORT_DIR))
+    ex.add_argument("--boot", type=int, default=2000)
+    ex.add_argument("--no-plots", action="store_true")
+    ex.set_defaults(func=cmd_extensions)
 
     args = p.parse_args(argv)
     setup_logging(args.log_json, args.log_level)

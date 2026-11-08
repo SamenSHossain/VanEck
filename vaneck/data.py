@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .config import AUX_TICKERS, MACRO_TICKERS, RAW_DIR, SPEC, UNIVERSE, Spec
+from .config import AUX_TICKERS, MACRO_TICKERS, RAW_DIR, SPEC, SUBSTITUTE_TICKERS, UNIVERSE, Spec
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def fetch_history(ticker: str, retries: int = 4, pause: float = 2.0) -> pd.DataF
 
 
 def all_tickers() -> list[str]:
-    return list(UNIVERSE) + list(AUX_TICKERS) + list(MACRO_TICKERS.values())
+    return list(UNIVERSE) + list(AUX_TICKERS) + list(SUBSTITUTE_TICKERS) + list(MACRO_TICKERS.values())
 
 
 def update_cache(tickers: list[str] | None = None, raw_dir: Path = RAW_DIR,
@@ -171,7 +171,9 @@ class MarketData:
 def build_market_data(spec: Spec = SPEC, raw_dir: Path = RAW_DIR,
                       tradeables: list[str] | None = None) -> MarketData:
     """Assemble the aligned :class:`MarketData` from the raw cache."""
-    tradeables = tradeables or (list(UNIVERSE) + list(AUX_TICKERS))
+    if tradeables is None:
+        tradeables = list(UNIVERSE) + list(AUX_TICKERS)
+        tradeables += [t for t in SUBSTITUTE_TICKERS if (raw_dir / _fname(t)).exists()]
     raw = {t: load_raw(t, raw_dir) for t in tradeables}
     macro_raw = {k: load_raw(v, raw_dir) for k, v in MACRO_TICKERS.items()}
 

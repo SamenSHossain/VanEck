@@ -13,7 +13,7 @@ LOOSE = RiskLimits(max_participation=10.0, max_turnover_one_way=2.0)
 
 
 class ZeroCost(CostModel):
-    def trade_cost(self, ticker, notional, adv):
+    def trade_cost(self, ticker, notional, adv, daily_vol=None):
         return 0.0
 
 

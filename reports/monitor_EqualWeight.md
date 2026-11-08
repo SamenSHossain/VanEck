@@ -34,6 +34,10 @@ Alerts:
 | cumulative_difference_vs_intended | 0.0125 |
 | tracking_error_ann_vs_intended | 0.0102 |
 | research_intended_costs_dollars | 8971.5141 |
+| research_intended_capped_total_return | 0.0973 |
+| cumulative_difference_vs_intended_capped | -0.0013 |
+| tracking_error_ann_vs_intended_capped | 0.0016 |
+| research_intended_capped_costs_dollars | 8599.3626 |
 | paper_costs_dollars | 8355.0592 |
 
 ## decisions

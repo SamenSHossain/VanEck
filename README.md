@@ -16,13 +16,19 @@ turnover is above the plan's limit. Run informationally, none of the six locked
 allocation rules comes close to Bonferroni significance, and the pre-specified
 regime overlay subtracts value. The write-up is in
 [`reports/FINDINGS.md`](reports/FINDINGS.md); the generated tables and figures
-are in [`reports/REPORT.md`](reports/REPORT.md).
+are in [`reports/REPORT.md`](reports/REPORT.md). Three pre-registered
+extensions (tax-aware execution, a statistical design with power, a shared
+liquidity model with a capacity curve) are written up in
+[`reports/EXTENSIONS_FINDINGS.md`](reports/EXTENSIONS_FINDINGS.md): execution
+policy is worth about 0.08 post-tax Sharpe to every portfolio but changes no
+verdict, the original test could only have detected a 10% annual edge, and
+capacity under the pre-registered limits is about $3M.
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
-make test            # 57 tests: lookahead invariance, tax lots, risk controls, paper-vs-research reconciliation
+make test            # 71 tests: lookahead invariance, golden regression, tax lots, planner, risk controls, reconciliation
 make lint            # ruff
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
 ```
@@ -31,7 +37,7 @@ make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes rep
 
 | Layer | What it does | Modules |
 |---|---|---|
-| **Research** | Pre-registered walk-forward study: data, lookahead guard, cost and tax models, baselines, locked strategies, Bonferroni-corrected tests, regime analysis, gates | `config` `data` `calendar` `universe` `costs` `tax` `portfolio` `baselines` `regimes` `signals` `optimizers` `strategies` `stats` `metrics` `study` `report` |
+| **Research** | Pre-registered walk-forward study: data, lookahead guard, cost and tax models, baselines, locked strategies, Bonferroni-corrected tests, regime analysis, gates; extensions: execution-policy ladder, power/HAC/deflated-Sharpe/Romano-Wolf, capacity curve | `config` `data` `calendar` `universe` `costs` `tax` `execution` `portfolio` `baselines` `regimes` `signals` `optimizers` `strategies` `stats` `metrics` `study` `report` `taxaware` `design` `liquidity` `extensions` |
 | **Infrastructure** | Reliable, observable runs: run manifests (git SHA, config hash, data hash), data health gate with exit codes, structured logs, CI on every push, scheduled monthly cycle | `audit` `health` `cli` `.github/workflows` |
 | **Trading** | Disciplined decisions: explicit pre-trade risk limits, idempotent decision records, paper broker with real share/dividend/split mechanics, monitor that reconciles paper against research and raises alerts | `risk` `broker` `live` `monitor` |
 
@@ -48,8 +54,9 @@ for the runbook.
 | `python -m vaneck validate` | the untouched 2025+ hold-out (only meaningful after a Phase 2 winner; deliberately not run) |
 | `python -m vaneck check [--json]` | data health report; exit code 2 on a blocking problem |
 | `python -m vaneck paper init|status|reset` | manage the paper book |
-| `python -m vaneck rebalance --strategy S [--as-of D] [--submit]` | one decision: health, targets, orders, risk checks, decision record; dry run unless `--submit` |
-| `python -m vaneck replay --strategy S --start D --end D` | operational rehearsal of the monthly cycle through the paper broker over a past window |
+| `python -m vaneck extensions` | the three pre-registered extensions; writes `reports/EXTENSIONS.md` |
+| `python -m vaneck rebalance --strategy S [--as-of D] [--submit] [--policy P2]` | one decision: health, targets, orders, risk checks, decision record; dry run unless `--submit`; optional execution policy P0-P3 |
+| `python -m vaneck replay --strategy S --start D --end D [--policy P2]` | operational rehearsal of the monthly cycle through the paper broker over a past window |
 | `python -m vaneck monitor --strategy S [--mark]` | reconcile the paper book with the research engine; exit code 1 on alerts |
 
 Add `--log-json` before the command for structured logs.
@@ -70,8 +77,9 @@ vaneck/
   calendar.py    first-trading-day execution dates, prior-close signal dates, 3y/1y monthly splits
   universe.py    Gate 0: correlations, 60-day rolling correlations, theme clusters, redundancy
   costs.py       spread tiers by dollar volume + slippage + fees (override file supported)
-  tax.py         FIFO/HIFO tax lots, wash sales, distribution tax, annual settlement, carryforward
-  portfolio.py   daily research simulator (pre- and post-tax NAV, turnover, costs, taxes)
+  tax.py         FIFO/HIFO/TAXOPT tax lots, wash sales, short/long-term gains, annual settlement, carryforward
+  execution.py   shared planner: lot plans, drift bands, cash deployment, loss harvesting, participation cap
+  portfolio.py   daily research simulator (pre- and post-tax NAV, turnover, costs, taxes) driven by the planner
   baselines.py   equal weight, 60/40 (plan definition and SPY/BND), buy-and-hold SMH
   regimes.py     ex-ante regime calendar (Crisis > Stagflation > Bull > Correction > Neutral)
   signals.py     None / Momentum / Drift -> pinned weights and bounds
@@ -81,6 +89,10 @@ vaneck/
   metrics.py     Sharpe, drawdown, calendar-year returns, turnover, regime breakdown
   study.py       orchestration: runs, Gate 1, Phase 2 tests, Gate 3, sensitivities
   report.py      markdown tables and figures
+  taxaware.py    extension 1: execution-policy ladder P0-P3, Gate 1 margins, sensitivities
+  design.py      extension 2: power, Newey-West tests, deflated Sharpe, Romano-Wolf
+  liquidity.py   extension 3: square-root impact + participation cap, capacity curve
+  extensions.py  runs the three extensions and writes reports/EXTENSIONS.md
   audit.py       run manifests: run id, git SHA, config hash, data hash, versions
   health.py      data health checks with block/warn severities
   risk.py        pre-trade risk limits, order construction, risk report
@@ -88,8 +100,8 @@ vaneck/
   live.py        idempotent rebalance decision pipeline, decision records, replay
   monitor.py     paper-vs-research reconciliation and alerts
   cli.py         python -m vaneck ...
-tests/           57 tests across all layers
-data/raw/        cached daily history per ticker (Open/High/Low/Close/Adj Close/Volume/Dividends/Splits)
+tests/           71 tests across all layers
+data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes
 docs/            the plan, the pre-registered SPEC, the operations runbook
 reports/         REPORT.md, FINDINGS.md, tables/*.csv, figures/*.png, gates.json, run_manifest.json, monitor_*.md
 paper/           paper book and decision records from the 2024 rehearsal and the latest dry run

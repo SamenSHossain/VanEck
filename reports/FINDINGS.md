@@ -225,7 +225,15 @@ structural levers rather than at signal research:
   and a zero-rate decade; the regime overlay in particular would look different
   in a sample with slow, grinding bear markets.
 
-## 10. Reproduce
+## 10. Pre-registered extensions
+
+Three follow-ups with thresholds fixed in `docs/SPEC.md` sections 14 to 16 are
+reported in `EXTENSIONS_FINDINGS.md`: tax-aware execution adds about 0.08
+post-tax Sharpe to every portfolio without changing the Gate 1 verdict; the
+annual Bonferroni test could only have detected a 10% to 14% annual edge; and
+capacity under a 50 bps tracking limit is about $3M, bound by HAP's volume.
+
+## 11. Reproduce
 
 ```bash
 pip install -r requirements.txt

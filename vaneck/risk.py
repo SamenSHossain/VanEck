@@ -40,6 +40,8 @@ class Order:
     price: float
     adv: float | None = None
     note: str = ""
+    reason: str = "rebalance"
+    lot_plan: list[tuple[int, float]] | None = None   # specific lots to relieve (sells)
 
     @property
     def notional(self) -> float:
@@ -56,8 +58,22 @@ class Order:
     def to_dict(self) -> dict:
         d = asdict(self)
         d.update(notional=round(self.notional, 2),
-                 participation=None if self.participation is None else round(self.participation, 4))
+                 participation=None if self.participation is None else round(self.participation, 4),
+                 lot_plan=None if self.lot_plan is None else [(int(i), round(float(u), 6)) for i, u in self.lot_plan])
         return d
+
+
+def truncate_lot_plan(plan: list[tuple[int, float]] | None, units: float) -> list[tuple[int, float]] | None:
+    """Shrink a lot plan to ``units`` (keeps the planner's priority order)."""
+    if plan is None:
+        return None
+    out, rem = [], units
+    for i, u in plan:
+        take = min(u, rem)
+        if take > 1e-12:
+            out.append((i, take))
+        rem -= take
+    return out
 
 
 @dataclass
@@ -170,6 +186,7 @@ def pre_trade_checks(orders: list[Order], targets: pd.Series, equity: float, cas
                 continue
             o.note = f"scaled from {o.shares:g} to {new_shares:g} shares (participation {p:.1%} > {limits.max_participation:.0%})"
             o.shares = new_shares
+            o.lot_plan = truncate_lot_plan(o.lot_plan, new_shares)
             scaled.append(o.ticker)
         kept.append(o)
     rep.checks.append(RiskCheck("participation", WARN if scaled else PASS, len(scaled), limits.max_participation,
