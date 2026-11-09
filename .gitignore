@@ -8,3 +8,4 @@ dist/
 state/*.sqlite
 state/*.sqlite-journal
 state/alerts.log
+reports/junit.xml

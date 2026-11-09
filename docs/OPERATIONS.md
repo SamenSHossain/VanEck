@@ -148,6 +148,14 @@ decision and any monitor alert are delivered to the webhook in
 `VANECK_WEBHOOK_URL` (Slack-compatible JSON) and always appended to
 `state/alerts.log`.
 
+`make webdash` runs the test suite with a JUnit report and then
+`python -m vaneck webdash`, which collects the study results, the
+extensions, the paper book, decision records, monitor and health state
+and the test outcomes into `reports/dashboard_data.json` and five flat
+row tables under `reports/dashboard/`. Those tables are the data behind
+the interactive results dashboard; after a new run, re-attach them to
+the dashboard so its figures match the committed results.
+
 ## Type checking, packaging, container
 
 `make typecheck` runs mypy (CI does too); `pip install -e .` provides the

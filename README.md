@@ -57,6 +57,7 @@ for the runbook.
 | `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
 | `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
 | `python -m vaneck status` / `history` / `dashboard` | latest state (exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
+| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the five row tables in `reports/dashboard/` that feed the interactive results dashboard (Gate 0, Gate 1, Phase 2, extensions, operations, tests) |
 | `python -m vaneck approve <run_id> --by NAME` / `halt on|off --reason R` / `limits show|propose|approve` | approvals as code: a dry run must be approved before `--submit`; global halt; two-person risk-limit changes |
 | `python -m vaneck broker check` / `reconcile [--adopt]` / `rebalance --broker alpaca --submit` | venue connectivity, shadow-vs-venue reconciliation, execution at Alpaca with the local book as shadow ledger |
 | `python -m vaneck expectations --strategy S` / `retire show|clear` | freeze retirement expectation bands (SPEC s.17); inspect or clear a retirement flag |
@@ -108,6 +109,7 @@ vaneck/
   store.py       SQLite history of runs, health, decisions, monitor reports, alerts
   notify.py      webhook + local alert log
   dashboard.py   static status page
+  webdash.py     data files behind the interactive dashboard
   health.py      data health checks with block/warn severities
   risk.py        pre-trade risk limits, order construction, risk report
   broker.py      Broker protocol and the paper broker (shares, cash, dividends, splits, fills)

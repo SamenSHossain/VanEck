@@ -1,4 +1,4 @@
-.PHONY: test lint typecheck check cross report extensions golden replay rebalance monitor status history dashboard docker
+.PHONY: test lint typecheck check cross report extensions golden replay rebalance monitor status history dashboard docker webdash
 
 test:
 	python -m pytest -q
@@ -41,6 +41,9 @@ history:
 
 dashboard:
 	python -m vaneck dashboard
+
+webdash:
+	python -m pytest -q --junitxml=reports/junit.xml && python -m vaneck webdash
 
 docker:
 	docker build -t vaneck . && docker run --rm vaneck check
