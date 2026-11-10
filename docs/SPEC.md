@@ -326,6 +326,8 @@ depends on them, and none of them is a new hypothesis test.
 | Assumption table | The main study's sensitivity runs (flat 4% cash, HIFO lots, no distribution tax, quarterly rebalancing of equal weight) restated as the Gate 1 margin under each assumption. |
 | Paper book against the bands | Calendar-month returns and the drawdown path of the paper book against the frozen expectation values of section 17. The rule verdicts still come from `vaneck/retire.py`. |
 | Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of every artefact the dashboard reads. |
+| Operator state | The switches `python -m vaneck status` reads (data health gate, halt flag, retirement flags, approval signing, risk limits, monitor, last decision) as they stood when the data was exported, with the alert log and the halt history. Not a live reading. |
+| Input inventory | Every stored input series with its role, provider, span, fetch time and file hash, beside the health and cross-validation checks of section 13. |
 
 A reading of the first row, for the record: the interval for equal weight
 against 60/40 VanEck is about -0.04 to +0.18. It includes zero and lies below

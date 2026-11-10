@@ -33,7 +33,25 @@ def git_info(root: Path = ROOT) -> dict:
     sha = _run("rev-parse", "HEAD")
     status = _run("status", "--porcelain")
     return {"sha": sha, "dirty": bool(status) if status is not None else None,
+            "dirty_code": code_dirty(status) if status is not None else None,
             "branch": _run("rev-parse", "--abbrev-ref", "HEAD")}
+
+
+GENERATED_DIRS = ("reports/", "paper/", "state/", "data/")
+
+
+def code_dirty(porcelain: str) -> bool:
+    """True when ``git status --porcelain`` lists a change outside the generated-output and data folders.
+
+    Regenerated reports make a tree "dirty" without changing what produced them; this separates the two, so a
+    manifest can say whether the code at its commit is the code that ran.
+    """
+    for line in porcelain.splitlines():
+        for path in line[3:].split(" -> "):          # a rename lists both sides
+            path = path.strip().strip('"')
+            if path and not path.startswith(GENERATED_DIRS):
+                return True
+    return False
 
 
 def config_hash(spec: Spec = SPEC) -> str:
@@ -50,6 +68,14 @@ def data_hash(raw_dir: Path = RAW_DIR) -> str:
             for chunk in iter(lambda: fh.read(1 << 20), b""):
                 h.update(chunk)
     return h.hexdigest()[:16]
+
+
+def data_files(folder: Path = RAW_DIR) -> dict[str, dict]:
+    """Size and content hash of every CSV in a data folder, keyed by file name."""
+    out = {}
+    for path in sorted(folder.glob("*.csv")):
+        out[path.name] = {"bytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()[:12]}
+    return out
 
 
 def package_versions() -> dict:

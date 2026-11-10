@@ -487,9 +487,12 @@ def cmd_history(args):
 
 
 def cmd_status(args):
+    from . import opstate
+    from .retire import flag_path
     st = _store()
-    h, d, m = st.latest("health"), st.latest("decisions"), st.latest("monitor")
-    bad = False
+    rep = opstate.report(st)
+    st.close()
+    h, d, m, halted, flags = rep["health"], rep["decision"], rep["monitor"], rep["halted"], rep["retired_flags"]
     h_line = f"{h['status']} as of {h['as_of']} ({h['n_block']} block, {h['n_warn']} warn) at {h['created_utc']}" if h else "none"
     d_line = (f"{d['strategy']} signal {d['signal_date']} -> {d['status']} ({d['n_orders']} orders) at {d['created_utc']}"
               if d else "none")
@@ -497,17 +500,10 @@ def cmd_status(args):
     print("health:  ", h_line)
     print("decision:", d_line)
     print("monitor: ", m_line)
-    from .approvals import is_halted
-    from .retire import flag_path
-    from .store import STATE_DIR
-    halted = is_halted()
-    flags = sorted(p.name for p in STATE_DIR.glob("RETIRED_*.json"))
     print("halt:    ", f"HALTED by {halted['by']} at {halted['at']}: {halted['reason']}" if halted else "clear")
     print("retired: ", ", ".join(flags) if flags else "none", "" if flags else f"(flags live under {flag_path('x').parent})")
-    bad = bool((h and h["status"] == "block") or (d and d["status"] in ("blocked", "halted")) or (m and m["status"] == "alert")
-               or halted or flags)
-    st.close()
-    return 1 if bad else 0
+    print("submit:  ", rep["submission"] + (" (" + "; ".join(rep["reasons"]) + ")" if rep["reasons"] else ""))
+    return 1 if rep["attention"] else 0
 
 
 def cmd_dashboard(args):

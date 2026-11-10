@@ -56,8 +56,8 @@ for the runbook.
 | `python -m vaneck check [--json] [--cross]` | data health report; `--cross` adds FRED agreement, peer divergence and the corporate-actions audit; exit code 2 on a blocking problem |
 | `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
 | `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
-| `python -m vaneck status` / `history` / `dashboard` | latest state (exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
-| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, and a frozen-results check with the hashes behind every table (`--boot N`, `--skip-golden`; SPEC section 18) |
+| `python -m vaneck status` / `history` / `dashboard` | latest state with a `submit:` line saying whether orders would go out (open, sell-only or blocked; exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
+| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, a frozen-results check with the hashes behind every table, the operator state with the alert and halt logs, and an inventory of every input file (`--boot N`, `--skip-golden`; SPEC section 18) |
 | `python -m vaneck approve <run_id> --by NAME` / `halt on|off --reason R` / `limits show|propose|approve` | approvals as code: a dry run must be approved before `--submit`; global halt; two-person risk-limit changes |
 | `python -m vaneck broker check` / `reconcile [--adopt]` / `rebalance --broker alpaca --submit` | venue connectivity, shadow-vs-venue reconciliation, execution at Alpaca with the local book as shadow ledger |
 | `python -m vaneck expectations --strategy S` / `retire show|clear` | freeze retirement expectation bands (SPEC s.17); inspect or clear a retirement flag |
@@ -108,6 +108,7 @@ vaneck/
   golden.py      frozen key results coupled to the config and data hashes
   store.py       SQLite history of runs, health, decisions, monitor reports, alerts
   notify.py      webhook + local alert log
+  opstate.py     operator state: the switches the pipeline reads before submitting (shared by `status` and the dashboard export)
   dashboard.py   static status page
   webdash.py     data files behind the interactive dashboard
   health.py      data health checks with block/warn severities

@@ -52,6 +52,15 @@ def _valid(payload: str, signature: str | None, key: str | None = None) -> tuple
     return ok, "signature valid" if ok else "signature invalid"
 
 
+def signing_state() -> tuple[str, bool]:
+    """How approvals are checked on this machine, and whether that refuses every approval."""
+    if _key():
+        return "signed approvals enforced", False
+    if os.environ.get(REQUIRE_SIGNED_ENV) == "1":
+        return "signing required but no key configured", True
+    return "no key configured, unsigned approvals accepted", False
+
+
 # --------------------------------------------------------------------------- #
 # Halt flag
 # --------------------------------------------------------------------------- #

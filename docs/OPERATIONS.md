@@ -143,7 +143,13 @@ Every `check`, `rebalance`, `replay`, `monitor`, `all` and `extensions` run is
 recorded in `state/vaneck.sqlite`. `python -m vaneck history` prints the
 timeline, `python -m vaneck status` the latest state (exit 1 when anything is
 blocked or alerting), and `python -m vaneck dashboard` renders
-`reports/dashboard.html`. A blocked health check, a blocked or unexecutable
+`reports/dashboard.html`. The last line of `status`, `submit:`, says what the
+pipeline would do with an order right now: `open`, `sell-only` (a retirement
+flag refuses new risk) or `blocked` (the halt flag, a blocking data check, or
+signing required with no key). It is computed by `vaneck/opstate.py`, which
+reads the switches in the order the pipeline does: data health gate, halt
+flag, retirement flags, approval signing, risk limits, then the monitor and
+the last decision for attention. A blocked health check, a blocked or unexecutable
 decision and any monitor alert are delivered to the webhook in
 `VANECK_WEBHOOK_URL` (Slack-compatible JSON) and always appended to
 `state/alerts.log`.
@@ -167,6 +173,17 @@ table, how many values reproduce, together with the configuration and
 data hashes of every stored artefact the page reads. It adds about half
 a minute; `--skip-golden` leaves it out, and the dashboard then shows no
 reproducibility status.
+
+Three more tables serve an operator. The operator state is the same report
+`status` prints, switch by switch, with the alert log from the store and the
+history of the halt flag; it is the state at export time, not a live
+reading. The input inventory lists every stored series (the raw cache and
+the second-source cache) with its role, provider, first and last bar, fetch
+time and file hash, so a change in the data hash can be traced to a file.
+The run metadata says whether the code that produced the export was
+committed: regenerated reports alone do not count as a code change. For
+that line to read "committed", commit code and docs first, run
+`make webdash`, then commit the regenerated data.
 
 ## Type checking, packaging, container
 

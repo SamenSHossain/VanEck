@@ -12,7 +12,7 @@ import pandas as pd
 
 from . import audit, design, metrics, retire, study
 from .calendar import Split
-from .config import REPORT_DIR, ROOT, SPEC, UNIVERSE, Spec
+from .config import AUX_TICKERS, MACRO_TICKERS, RAW_DIR, REPORT_DIR, ROOT, SPEC, SUBSTITUTES, UNIVERSE, Spec
 from .data import MarketData
 from .regimes import episodes, regime_at
 from .stats import bootstrap_sharpe_diff
@@ -22,6 +22,7 @@ TABLES = REPORT_DIR / "tables"
 EDGE_WINDOW = metrics.TRADING_DAYS   # trading days in the rolling 12-month edge
 BOOT_BLOCK = int(inspect.signature(bootstrap_sharpe_diff).parameters["block"].default)   # the block every interval here uses
 CLASSIC_BENCHMARK = "60/40 Classic (SPY/BND)"
+_CODE_STATE = {True: "uncommitted code changes", False: "committed"}
 
 
 def _records(df: pd.DataFrame, index_name: str = "name") -> list[dict]:
@@ -92,6 +93,65 @@ def _store_timeline(n: int = 40) -> list[dict]:
         return st.timeline(n)
     finally:
         st.close()
+
+
+def operator_state(state_dir: Path = ROOT / "state", n_alerts: int = 50) -> dict:
+    """The pipeline's switches as ``python -m vaneck status`` reads them, with the alert log and the halt history."""
+    from . import opstate
+    from .store import Store
+    db = state_dir / "vaneck.sqlite"
+    st = Store(db) if db.exists() else None
+    try:
+        rep = opstate.report(st, state_dir)
+        alerts = st.recent("alerts", n_alerts) if st else []
+    finally:
+        if st:
+            st.close()
+    return {"submission": rep["submission"], "attention": rep["attention"], "reasons": rep["reasons"], "gates": rep["gates"],
+            "checked_utc": audit.utc_now(), "halt_log": opstate.halt_history(state_dir),
+            "alert_log": [{"time": a["created_utc"], "source": a["source"], "severity": a["severity"], "message": a["message"],
+                           "delivered": bool(a["delivered"])} for a in alerts]}
+
+
+def data_inventory(raw_dir: Path = RAW_DIR, secondary_dir: Path | None = None) -> list[dict]:
+    """Every stored input series: what it is for, where it came from, what it spans and the hash of its file."""
+    from .sources import SECONDARY_DIR
+    secondary_dir = secondary_dir or SECONDARY_DIR
+    macro_of = {ticker: name for name, ticker in MACRO_TICKERS.items()}
+    fund_of = {sub: fund for fund, sub in SUBSTITUTES.items()}
+
+    def role(series: str) -> str:
+        if series in UNIVERSE:
+            return "universe fund"
+        if series in AUX_TICKERS:
+            return "benchmark or overlay asset"
+        if series in fund_of:
+            return f"substitute and peer for {fund_of[series]}"
+        if series in macro_of:
+            return f"macro input ({macro_of[series]})"
+        return "other"
+
+    rows: list[dict] = []
+
+    def add(series: str, purpose: str, provider: str, status, rec: dict, file: str | None, digest, source, hashed: bool) -> None:
+        rows.append({"series": series, "role": purpose, "provider": provider, "status": status, "first": rec.get("first"),
+                     "last": rec.get("last"), "rows": rec.get("rows"), "fetched_utc": rec.get("fetched_utc"), "file": file,
+                     "sha256": digest, "note": source, "in_data_hash": hashed})
+
+    hashes = audit.data_files(raw_dir)
+    for series, rec in sorted((_json(raw_dir / "manifest.json") or {}).items()):
+        file = rec.get("file")
+        add(series, role(series), "Yahoo Finance", "ok" if file in hashes else "missing", rec, file,
+            (hashes.get(file) or {}).get("sha256"), rec.get("source"), True)
+    hashes = audit.data_files(secondary_dir)
+    providers = {"fred": "FRED", "stooq": "Stooq"}
+    for key, rec in sorted((_json(secondary_dir / "manifest.json") or {}).items()):
+        provider, _, code = key.partition(":")
+        file = f"{provider}_{code}.csv"
+        add(key, f"second source for {rec.get('maps_to') or code}", providers.get(provider, provider), rec.get("status"), rec,
+            file if file in hashes else None, (hashes.get(file) or {}).get("sha256"),
+            rec.get("error") or f"{providers.get(provider, provider)} series {code}", False)
+    return rows
 
 
 def _json(path: Path):
@@ -275,6 +335,7 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
                  "oos": [str(splits[0].exec_date.date()), spec.study_end], "n_rebalances": len(splits),
                  "repo": "https://github.com/SamenSHossain/VanEck", "branch": manifest["git"].get("branch"),
                  "universe": list(UNIVERSE),
+                 "code_state": _CODE_STATE.get(manifest["git"].get("dirty_code"), "unknown"),
                  "config": {"tax_rate": spec.tax_rate, "lot_method": spec.lot_method, "train_years": spec.train_years,
                             "wash_sale_days": spec.wash_sale_days, "holdout_start": spec.holdout_start,
                             "cash_yield_mode": spec.cash_yield_mode, "w_min": spec.w_min, "w_max": spec.w_max,
@@ -298,6 +359,7 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
         "operations": {"book": book_json, "decisions": decisions,
                        "monitor": _json(REPORT_DIR / "monitor_EqualWeight.json"), "health": _json(REPORT_DIR / "health.json"),
                        "expectations": _json(ROOT / "paper" / "expectations_EqualWeight.json"), "timeline": _store_timeline(),
+                       "state": operator_state(), "data_files": data_inventory(),
                        "crossval": {k: _csv(f"crossval_{k}") for k in ("macro", "peers", "corporate_actions")}},
         "tests": _junit(junit),
         "golden": golden,
@@ -339,7 +401,8 @@ def tables(payload: dict) -> dict[str, list[dict]]:
                                "n_rebalances": m["n_rebalances"], "generated_utc": m["generated_utc"],
                                "git_sha": (m["git"].get("sha") or "")[:12], "branch": m["branch"],
                                "config_hash": m["config_hash"], "data_hash": m["data_hash"], "repo": m["repo"],
-                               "universe": ", ".join(m["universe"]), "n_funds": len(m["universe"])})
+                               "universe": ", ".join(m["universe"]), "n_funds": len(m["universe"]),
+                               "code_state": m.get("code_state")})
     study_rows += _kv("gates", {"gate0": _PF.get(g.get("gate0"), "unknown"), "gate1": _PF.get(g.get("gate1"), "unknown"),
                                 "gate2": _PF.get(g.get("gate2"), "unknown"),
                                 "gate2_winners": ", ".join(g.get("gate2_winners") or []) or "none"})
@@ -408,6 +471,14 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     op_rows += _rows("crossval_peers", _drop(cv.get("peers") or [], "Unnamed: 0"))
     op_rows += _rows("crossval_ca", cv.get("corporate_actions"))
     op_rows += _rows("timeline", [{"i": i, **r} for i, r in enumerate(op["timeline"] or [])])
+    state = op.get("state") or {}
+    op_rows += _kv("ops_state", {"submission": state.get("submission"), "attention": state.get("attention"),
+                                 "reasons": "; ".join(state.get("reasons") or []) or "none",
+                                 "checked_utc": state.get("checked_utc")})
+    op_rows += _rows("ops_gates", state.get("gates"))
+    op_rows += _rows("alert_log", [{"i": i, **r} for i, r in enumerate(state.get("alert_log") or [])])
+    op_rows += _rows("halt_log", [{"i": i, **r} for i, r in enumerate(state.get("halt_log") or [])])
+    op_rows += _rows("data_files", op.get("data_files"))
     op_rows += _kv("expectations", {k: v for k, v in (op["expectations"] or {}).items() if k != "window"})
 
     ts = payload["tests"]

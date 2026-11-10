@@ -78,3 +78,15 @@ def test_exported_tables_carry_what_the_dashboard_reads(synth, tmp_path):
 
     assert table("tests", "provenance")[0]["same_inputs"] == "yes"
     assert not table("tests", "golden_files")          # the frozen-results check was skipped
+
+    state = {r["key"]: r["value"] for r in table("operations", "ops_state")}
+    assert state["submission"] in ("open", "sell-only", "blocked") and state["attention"] in ("yes", "no")
+    assert state["checked_utc"]
+    gates = table("operations", "ops_gates")
+    assert {"switch", "state", "effect", "detail", "since"} <= set(gates[0])
+    assert {g["switch"] for g in gates} >= {"data health gate", "halt flag", "approval signing", "risk limits"}
+    files = table("operations", "data_files")
+    assert {"series", "role", "provider", "status", "first", "last", "rows", "sha256", "in_data_hash"} <= set(files[0])
+    assert sum(f["role"] == "universe fund" for f in files) == 9 and all(f["sha256"] for f in files if f["in_data_hash"] == "yes")
+    meta = {r["key"]: r["value"] for r in table("study_tables", "meta")}
+    assert meta["code_state"] in ("committed", "uncommitted code changes", "unknown")
