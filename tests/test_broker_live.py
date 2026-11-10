@@ -41,6 +41,38 @@ def test_paper_broker_fills_dividends_and_splits(synth, tmp_path):
     assert curve.index.is_monotonic_increasing and len(curve) > 80
 
 
+def test_orders_keep_the_no_rebuy_window_for_a_fund_that_was_sold_out(synth, tmp_path):
+    """Whole-share books never leave dust: a fund sold out at a loss has no holding view at all."""
+    from vaneck.execution import ExecutionPolicy
+    spec = Spec(cash_yield_mode="fixed", cash_yield_fixed=0.0)
+    br = PaperBroker(tmp_path / "book.json", synth, ZeroCost(spec, override_file=None), spec)
+    close = synth.close["SMH"]
+    i0 = 100 + int(close.iloc[100:400].to_numpy().argmax())       # buy at a local high, sell five days later
+    d0, d1 = synth.index[i0], synth.index[i0 + 5]
+    assert close.at[d1] < close.at[d0]
+    br.init(1_000_000.0, d0, data_vintage=str(d0.date()))
+    br.submit([Order("SMH", "BUY", 1000, float(close.at[d0]))], d0)
+    br.submit([Order("SMH", "SELL", 1000, float(close.at[d1]))], d1)
+    assert "SMH" not in br.positions() and br.ledger.last_loss_sale["SMH"] == d1
+    d2 = synth.index[synth.index.get_loc(d1) + 5]
+    assert (d2 - d1).days < 31
+    pol = ExecutionPolicy(harvest=True, substitutes=(("SMH", "MOAT"),))
+    prices, adv = synth.close.loc[d2], br.cost_model.adv_table(synth).loc[d2]
+    orders = live.orders_from_plan(d2, pd.Series({"SMH": 0.5}), br, prices, adv, pol, LOOSE, spec)
+    assert [(o.ticker, o.side) for o in orders] == [("MOAT", "BUY")]
+    # reloading the book from disk keeps the memory
+    br2 = PaperBroker(tmp_path / "book.json", synth, ZeroCost(spec, override_file=None), spec)
+    orders = live.orders_from_plan(d2, pd.Series({"SMH": 0.5}), br2, prices, adv, pol, LOOSE, spec)
+    assert [(o.ticker, o.side) for o in orders] == [("MOAT", "BUY")]
+    # once the window has passed the fund itself is bought again
+    d3 = synth.index[synth.index.get_loc(d1) + 30]
+    assert (d3 - d1).days >= 31
+    br.advance_to(d3)
+    orders = live.orders_from_plan(d3, pd.Series({"SMH": 0.5}), br, synth.close.loc[d3],
+                                   br.cost_model.adv_table(synth).loc[d3], pol, LOOSE, spec)
+    assert [(o.ticker, o.side) for o in orders] == [("SMH", "BUY")]
+
+
 def test_rebalance_dry_run_then_submit_then_duplicate(synth, tmp_path):
     md = synth
     sig = md.index[-30]

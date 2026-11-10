@@ -79,7 +79,8 @@ def orders_from_plan(date, targets: pd.Series, broker: PaperBroker, prices: pd.S
                      policy: ExecutionPolicy, limits: RiskLimits, spec: Spec = SPEC) -> list[Order]:
     """Whole-share orders from the shared execution planner (same rules as the research engine)."""
     cash = broker.cash() * (1.0 - limits.cost_reserve_bps / 1e4)
-    trades = plan(date, targets, broker.holding_views(date), cash, prices, policy, adv, spec.long_term_days)
+    trades = plan(date, targets, broker.holding_views(date), cash, prices, policy, adv, spec.long_term_days,
+                  broker.loss_sale_dates())
     orders = []
     held = broker.positions()
     for tr in trades:

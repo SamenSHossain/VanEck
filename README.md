@@ -28,7 +28,7 @@ capacity under the pre-registered limits is about $3M.
 
 ```bash
 pip install -r requirements.txt
-make test            # 92 tests: lookahead + leak canary, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
+make test            # 117 tests: lookahead + leak canary, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
 make lint            # ruff
 make typecheck       # python -m mypy, with pandas-stubs
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
@@ -124,7 +124,7 @@ vaneck/
   shortfall.py   implementation shortfall per decision: distance to target, capped orders, explicit and delay cost
   holdout.py     the sealed 2025+ hold-out: status, one-time logged opening, frozen results
   cli.py         python -m vaneck ...
-tests/           92 tests across all layers incl. hypothesis property tests, a leak canary, goldens and a fake venue
+tests/           117 tests across all layers incl. hypothesis property tests, a leak canary, goldens and a fake venue
 data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes
 data/secondary/  FRED series for cross-validation
 docs/            the plan, the pre-registered SPEC, the operations runbook

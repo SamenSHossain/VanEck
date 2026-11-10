@@ -5,15 +5,15 @@ fixed in `docs/SPEC.md` sections 14 to 16 before the first run. Generated tables
 and figures: `EXTENSIONS.md`. Window: 2017-06-01 to 2024-12-31, the main study's
 out-of-sample period.
 
-## 1. Tax-aware execution: worth about 0.08 Sharpe to everyone, changes no verdict
+## 1. Tax-aware execution: worth 0.03 to 0.08 Sharpe, changes no verdict
 
 | Post-tax Sharpe | P0 calendar, FIFO | P1 TAXOPT lots | P2 + 20% drift band | P3 + loss harvesting |
 |---|---|---|---|---|
 | Equal weight | 0.37 | 0.41 | 0.44 | 0.44 |
-| 60/40 VanEck | 0.30 | 0.34 | 0.36 | 0.39 |
+| 60/40 VanEck | 0.30 | 0.34 | 0.36 | 0.37 |
 | 60/40 SPY/BND | 0.48 | 0.50 | 0.51 | 0.53 |
 | Drift x MinVar (no overlay) | 0.37 | 0.39 | 0.39 | 0.40 |
-| **Gate 1 margin (EW minus 60/40 VanEck)** | **0.07** | **0.07** | **0.08** | **0.06** |
+| **Gate 1 margin (EW minus 60/40 VanEck)** | **0.07** | **0.07** | **0.08** | **0.07** |
 
 | Equal weight under each policy | Tax drag (% NAV/yr) | One-way turnover | Costs (bps/yr) | Tracking error vs P0, pre-tax |
 |---|---|---|---|---|
@@ -29,21 +29,28 @@ What this says:
 * **Drift bands are the best step.** They cut turnover by three quarters, halve
   trading costs, add another 0.03 Sharpe, and track the calendar portfolio
   within 0.7% a year. This is the policy to run.
-* **Harvesting is not free.** It realises 43 loss sales for equal weight over
+* **Harvesting is not free.** It realises 40 loss sales for equal weight over
   the window and lowers tax drag to under 1% of NAV, but the substitutes track
   imperfectly (2.7% tracking error, 0.3 points of pre-tax return given back)
   and turnover rises again. For equal weight it adds nothing after P2; for the
-  bond-heavier 60/40 it adds 0.03. Dropping the greyest pair (OUNZ/IAU) made
+  two 60/40 portfolios it adds 0.01 to 0.02. Dropping the greyest pair (OUNZ/IAU) made
   equal weight's result slightly better, not worse, so the pair is not what
   carries the benefit.
 * **Taxing short-term gains at 46% changes nothing material** (P3 still 0.44).
-* **The Gate 1 verdict stands.** The margin moves between 0.06 and 0.08 against
+* **The Gate 1 verdict stands.** The margin moves between 0.07 and 0.08 against
   a 0.20 threshold, because every policy helps the benchmark as much as the
   candidate. Tax-aware execution is an operational improvement, not evidence
   for the universe.
 
 Operationally, the same planner now drives the paper broker (`--policy P2`),
 with lots, wash-sale tracking and realised-gain reporting in the book.
+
+**Corrected on 2026-11-10.** The first version of this section was computed
+with a planner that dropped the 31-day no-rebuy window once a fund had been
+sold out completely (SPEC section 14, correction note). With the rule applied
+as written, 8 of the 64 frozen ladder values moved, all in the P3 column:
+60/40 VanEck 0.39 to 0.37, the P3 margin 0.06 to 0.07, equal weight's loss
+sales 43 to 40. P0 to P2 and the other two extensions are unchanged.
 
 ## 2. Statistical design: the original test could not have passed
 

@@ -84,6 +84,9 @@ class LiveBroker:
     def holding_views(self, date=None) -> dict[str, HoldingView]:
         return self.shadow.holding_views(date)
 
+    def loss_sale_dates(self) -> dict[str, pd.Timestamp]:
+        return self.shadow.loss_sale_dates()
+
     def equity_curve(self) -> pd.Series:
         return self.shadow.equity_curve()
 

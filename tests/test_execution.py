@@ -1,6 +1,10 @@
 import pandas as pd
 import pytest
 
+from vaneck import portfolio
+from vaneck.config import Spec
+from vaneck.costs import CostModel
+from vaneck.data import MarketData
 from vaneck.execution import ExecutionPolicy, HoldingView, plan
 from vaneck.tax import Lot, select_lots
 
@@ -80,6 +84,70 @@ def test_harvest_sells_loss_lots_and_buys_substitute():
     assert all(tr.reason != "harvest" for tr in trades)
 
 
+def test_no_rebuy_window_applies_to_a_fund_with_no_holding_view():
+    """A fund sold out completely has no holding view; its loss-sale date reaches the planner separately."""
+    prices = pd.Series({"X": 100.0, "S": 50.0, "Y": 10.0})
+    targets = pd.Series({"X": 0.5, "Y": 0.5})
+    hold = {"X": HoldingView("X", 100.0, [(0, 100, 15000.0, OLD)], last_buy=OLD),
+            "Y": HoldingView("Y", 10.0, [(0, 500, 5000.0, OLD)], last_buy=OLD)}
+    pol = ExecutionPolicy(harvest=True, substitutes=(("X", "S"),))
+    # S was loss-sold five days ago and is no longer held: harvesting X must not buy it back
+    trades = plan(D, targets, hold, cash=0.0, prices=prices, policy=pol, last_loss_sale={"S": D - pd.Timedelta(days=5)})
+    assert all(tr.reason != "harvest" for tr in trades) and "S" not in _by(trades)
+    # day 30 is still inside the window, day 31 is not
+    trades = plan(D, targets, hold, cash=0.0, prices=prices, policy=pol, last_loss_sale={"S": D - pd.Timedelta(days=30)})
+    assert "S" not in _by(trades)
+    trades = plan(D, targets, hold, cash=0.0, prices=prices, policy=pol, last_loss_sale={"S": D - pd.Timedelta(days=31)})
+    assert _by(trades)["S"].dollars > 0 and _by(trades)["X"].reason == "harvest"
+    # a rebalance buy uses the substitute while the fund itself is inside its window
+    trades = plan(D, pd.Series({"X": 0.5}), {}, cash=10_000.0, prices=prices, policy=pol,
+                  last_loss_sale={"X": D - pd.Timedelta(days=10)})
+    t = _by(trades)
+    assert "X" not in t and t["S"].dollars == pytest.approx(5000.0)
+    # without harvesting there is no window: the calendar policies are unchanged
+    trades = plan(D, pd.Series({"X": 0.5}), {}, cash=10_000.0, prices=prices, policy=ExecutionPolicy(),
+                  last_loss_sale={"X": D - pd.Timedelta(days=10)})
+    assert _by(trades)["X"].dollars == pytest.approx(5000.0)
+
+
+class ZeroCost(CostModel):
+    def trade_cost(self, ticker, notional, adv, daily_vol=None):
+        return 0.0
+
+
+def _step_market(steps: dict[str, list[tuple[str, float]]]) -> MarketData:
+    """Flat prices that step to a new level on the given dates; no distributions, deep volume."""
+    idx = pd.bdate_range("2023-07-03", "2023-12-29")
+    px = pd.DataFrame(index=idx, columns=list(steps), dtype=float)
+    for t, path in steps.items():
+        for day, level in path:
+            px.loc[pd.Timestamp(day):, t] = level
+    zeros = pd.DataFrame(0.0, index=idx, columns=px.columns)
+    macro = pd.DataFrame({"spx": 1.0, "vix": 1.0, "tnx": 1.0, "irx": 0.0, "crb": 1.0}, index=idx)
+    return MarketData(adj_close=px, close=px.copy(), volume=zeros + 1e7, distributions=zeros, macro=macro,
+                      splits=zeros.copy())
+
+
+def test_simulator_keeps_the_no_rebuy_window_after_a_fund_is_sold_out():
+    """X is harvested into S; 30 days later S qualifies, but swapping back would rebuy X inside its window."""
+    md = _step_market({"X": [("2023-07-03", 100.0), ("2023-10-02", 90.0)],
+                       "S": [("2023-07-03", 50.0), ("2023-11-01", 45.0)]})
+    buy, swap, later = pd.Timestamp("2023-08-01"), pd.Timestamp("2023-10-02"), pd.Timestamp("2023-11-01")
+    assert (later - swap).days == 30
+    targets = pd.DataFrame({"X": 1.0}, index=[buy, swap, later])
+    spec = Spec(cash_yield_mode="fixed", cash_yield_fixed=0.0)
+    pol = ExecutionPolicy(harvest=True, substitutes=(("X", "S"),))
+    for taxed in (False, True):
+        res = portfolio.simulate(md, targets, spec=spec, taxed=taxed, cost_model=ZeroCost(spec, override_file=None),
+                                 initial=1_000_000.0, policy=pol)
+        assert res.harvests.loc[swap] == 1                         # the first swap happens
+        assert res.weights.loc[swap, "X"] == 0.0                   # and sells X out completely
+        assert res.weights.loc[swap, "S"] == pytest.approx(1.0)
+        assert not res.trades.loc[later].any()                     # the swap back is refused
+        assert res.harvests.loc[later] == 0
+        assert not [e for e in res.ledger.log if e["event"] == "wash_after"]
+
+
 def test_participation_cap_scales_and_truncates_lot_plans():
     prices = pd.Series({"X": 100.0, "Y": 10.0})
     adv = pd.Series({"X": 10_000.0, "Y": 20_000.0})
@@ -90,3 +158,22 @@ def test_participation_cap_scales_and_truncates_lot_plans():
     assert t["X"].dollars == pytest.approx(1000.0) and t["X"].capped and t["X"].requested == pytest.approx(10_000.0)
     assert t["Y"].dollars == pytest.approx(-2000.0) and t["Y"].capped
     assert t["Y"].lot_plan == [(0, pytest.approx(200.0))]
+
+
+def test_harvesting_never_rebuys_inside_the_window_on_random_paths():
+    """Invariant on realistic paths: under a harvesting policy the ledger never sees a rebuy within 30 days.
+
+    On this seed the planner without the ledger's loss-sale memory rebuys twice inside the window.
+    """
+    from vaneck.baselines import equal_weight
+    from vaneck.calendar import walk_forward_splits
+    from vaneck.data import make_synthetic
+    md = make_synthetic(n_days=1500, seed=3, daily_vol=0.02)
+    pairs = (("SMH", "MOAT"), ("GDX", "ANGL"), ("REMX", "FLTR"), ("HAP", "PFXF"))
+    splits = walk_forward_splits(md.index, md.index[0], md.index[-1])
+    targets = portfolio.build_targets(md, splits, equal_weight, [a for a, _ in pairs])
+    pol = ExecutionPolicy(band=0.20, harvest=True, lot_method="TAXOPT", substitutes=pairs)
+    for taxed in (False, True):
+        res = portfolio.simulate(md, targets, taxed=taxed, policy=pol)
+        assert res.harvests.sum() >= 10                              # the policy is active on these paths
+        assert not [e for e in res.ledger.log if e["event"] == "wash_after"]

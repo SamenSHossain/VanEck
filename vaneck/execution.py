@@ -8,6 +8,7 @@ so research and execution cannot drift apart. Thresholds are in SPEC section 14.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -94,8 +95,14 @@ def _recent(date: pd.Timestamp, other: pd.Timestamp | None, days: int) -> bool:
 
 def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView], cash: float,
          prices: pd.Series, policy: ExecutionPolicy, adv: pd.Series | None = None,
-         long_term_days: int = SPEC.long_term_days) -> list[Trade]:
-    """Dollar trades implementing ``policy`` for one decision date."""
+         long_term_days: int = SPEC.long_term_days,
+         last_loss_sale: Mapping[str, pd.Timestamp] | None = None) -> list[Trade]:
+    """Dollar trades implementing ``policy`` for one decision date.
+
+    ``last_loss_sale`` is the ledger's latest loss-sale date for every fund, held or not.
+    The no-rebuy window needs it: a fund that was sold out completely has no holding view,
+    so a date carried only on the views is lost exactly when the whole position was sold.
+    """
     date = pd.Timestamp(date)
     targets = targets[targets.index.isin(prices.index)].astype(float)
     subs = policy.subs
@@ -145,8 +152,8 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
         if not policy.harvest:
             return False
         h = holdings.get(t)
-        last = h.last_loss_sale if h else None
-        return t in pending_loss_sale or _recent(date, last, policy.no_rebuy_days)
+        known = [d for d in ((last_loss_sale or {}).get(t), h.last_loss_sale if h else None) if d is not None]
+        return t in pending_loss_sale or _recent(date, max(known) if known else None, policy.no_rebuy_days)
 
     def vehicle_for_buy(members: list[str]) -> str | None:
         held = sorted((m for m in members if value.get(m, 0.0) > 0), key=lambda m: -value[m])

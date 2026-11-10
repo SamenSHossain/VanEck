@@ -145,7 +145,7 @@ def simulate(md: MarketData, targets: pd.DataFrame, spec: Spec = SPEC, taxed: bo
                         for t in tickers if units[col[t]] > 0 and np.isfinite(price[col[t]])}
             value_before = float(np.nansum(np.where(np.isfinite(price), units * price, 0.0)) + cash)
             adv_s = pd.Series(adv[i], index=tickers) if policy.max_participation is not None else None
-            plan_ = plan(d, w, holdings, cash, prices, policy, adv_s, spec.long_term_days)
+            plan_ = plan(d, w, holdings, cash, prices, policy, adv_s, spec.long_term_days, ledger.last_loss_sale)
             row = np.zeros(n)
             total_cost = 0.0
             n_harv = n_cap = 0

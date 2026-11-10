@@ -86,6 +86,10 @@ class PaperBroker:
                                self.ledger.last_loss_sale.get(t))
                 for t, sh in self.positions().items() if sh > 0}
 
+    def loss_sale_dates(self) -> dict[str, pd.Timestamp]:
+        """Latest loss-sale date of every fund, including funds no longer held (the planner's no-rebuy window)."""
+        return dict(self.ledger.last_loss_sale)
+
     def _require(self) -> dict:
         if self.book is None:
             raise RuntimeError(f"paper book {self.path} not initialised (run `paper init`)")

@@ -243,6 +243,34 @@ Rules (all fixed now):
   post-tax Sharpe gain of each policy over P0 for each portfolio. (c) Pre-tax
   tracking error of P2/P3 against P0 (the exposure fidelity cost of trading less).
 
+**Correction, 2026-11-10 (after the results were known).** The rules above are
+unchanged; this records a defect in how one of them was coded. "A fund that was
+loss-sold is not repurchased for 31 days" read the loss-sale date from the
+fund's holding record, and a fund that has been sold out completely has no
+holding record. The window was therefore skipped exactly when the whole
+position had been sold: the planner could swap back into a fund 30 days after
+selling it at a loss, and the ledger then disallowed that loss as a wash sale.
+In the research simulator the outcome also depended on floating-point residue
+in the unit count, which is how it was found: a Python 3.11 and a Python 3.13
+environment disagreed on one such swap. The planner now takes the ledger's
+loss-sale date for every fund, held or not, in the research simulator and in
+the paper and live brokers.
+
+Repurchases inside the window in the P3 runs before the correction: equal
+weight 1 (post-tax), 60/40 VanEck 1 (post-tax), DriftxMinVar 5 pre-tax and 4
+post-tax. After: none. Effect on the P3 results:
+
+| P3, post-tax Sharpe | Before | After |
+|---|---|---|
+| Equal weight | 0.4442 | 0.4441 |
+| 60/40 VanEck | 0.3875 | 0.3696 |
+| 60/40 Classic | 0.5316 | 0.5316 |
+| DriftxMinVar | 0.4000 | 0.4027 |
+| Gate 1 margin under P3 | 0.0567 | 0.0744 |
+
+P0 to P2, the main study, extensions 2 and 3 and every verdict are unchanged.
+The frozen reference results (`tests/golden`) were refrozen with this change.
+
 ## 15. Statistical design (question: what edge could the tests detect?)
 
 * **Power.** For a paired one-sided t-test, the minimum detectable effect at

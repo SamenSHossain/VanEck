@@ -72,6 +72,10 @@ pre-registered substitutes (P3). The paper book keeps tax lots, wash-sale
 state, realised gains by year and the accrued liability. Without `--policy`
 the legacy full rebalance applies.
 
+Under P3 a fund sold at a loss is not bought again for 31 days. The window
+follows the ledger's loss-sale dates, so it also holds for a fund that was sold
+out completely, and it survives a reload of the book.
+
 ## Monitoring (`vaneck/monitor.py`)
 
 - **Engine agreement.** The research simulator is fed the weights the paper
