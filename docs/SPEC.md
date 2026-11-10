@@ -460,3 +460,14 @@ single-threaded BLAS, and two environments (Python 3.11 with numpy 2.4, Python
 3.13 with numpy 2.5). All agree within 4e-7 relative. The largest spread is on
 the MaxSharpe strategies and comes from the optimizer's stopping tolerance;
 the golden test allows 1e-6. `docs/OPERATIONS.md` gives the command.
+
+**Found and left unchanged, for the owner of this protocol to decide.** The
+harvesting rule of section 14 skips a fund "bought in the previous 30 days".
+The code tests `days < 30`, so a fund bought exactly 30 days earlier is still
+harvested, while the ledger's wash-sale window of section 6 includes day 30
+and disallows part of that loss. With monthly rebalancing a 30-day gap is
+common. In the P3 runs this happened four times, once in each of the equal
+weight and 60/40 VanEck runs before and after tax, with $1,275 to $47,171 of
+the harvested loss disallowed. A 31-day test would agree with the ledger. It
+is a change to a pre-registered threshold and would restate the P3 column, so
+it has not been made here.
