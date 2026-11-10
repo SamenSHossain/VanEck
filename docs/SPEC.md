@@ -3,9 +3,14 @@
 This file records every modelling decision the backtests depend on, including
 how ambiguities in `revised-vaneck-project.md` were resolved. All rules were
 implemented in `vaneck/config.py` and the strategy code **before** any strategy
-result was computed. Nothing in this document was changed in response to
-results. Where the implementation deviates from the plan text, the deviation
-and its reason are listed in the last section.
+result was computed. Sections 1 to 17 were fixed before the results they
+govern, and no threshold in them has been changed since. Text added after
+results were known is marked where it stands: section 18 (descriptive
+displays), section 19 (the hold-out protocol, written before the hold-out is
+opened), and the corrections and tie rules of 2026-11-10 (section 20, with
+notes in sections 8 and 14), which restate some numbers and say which. Where
+the implementation deviates from the plan text, the deviation and its reason
+are listed in section 12.
 
 ## 1. Data
 
