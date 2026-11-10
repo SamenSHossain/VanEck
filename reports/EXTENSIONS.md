@@ -11,7 +11,7 @@ Window 2017-06-01 to 2024-12-31; rules in docs/SPEC.md sections 14-16. Narrative
 | P0 calendar, FIFO | 0.369 | 0.298 | 0.071 | 0.200 | no |
 | P1 TAXOPT lots | 0.411 | 0.339 | 0.072 | 0.200 | no |
 | P2 + drift band 20% | 0.443 | 0.360 | 0.083 | 0.200 | no |
-| P3 + loss harvesting | 0.444 | 0.388 | 0.057 | 0.200 | no |
+| P3 + loss harvesting | 0.444 | 0.370 | 0.074 | 0.200 | no |
 
 Policy ladder (pre- and post-tax, same OOS window; tracking error is against the same portfolio under P0, pre-tax):
 
@@ -20,11 +20,11 @@ Policy ladder (pre- and post-tax, same OOS window; tracking error is against the
 | Equal weight | P0 calendar, FIFO | 9.9% | 6.9% | 0.554 | 0.369 | -28.6% | 20.9% | 3.932 | 2.544 | 0 | 0.0% | 0.000 |
 | Equal weight | P1 TAXOPT lots | 9.9% | 7.5% | 0.554 | 0.411 | -28.6% | 20.9% | 3.932 | 1.849 | 0 | 0.0% | 0.042 |
 | Equal weight | P2 + drift band 20% | 9.7% | 8.0% | 0.546 | 0.443 | -27.9% | 5.5% | 1.773 | 1.530 | 0 | 0.7% | 0.075 |
-| Equal weight | P3 + loss harvesting | 9.5% | 8.0% | 0.546 | 0.444 | -28.6% | 30.2% | 4.808 | 0.952 | 43 | 2.7% | 0.076 |
+| Equal weight | P3 + loss harvesting | 9.5% | 8.0% | 0.546 | 0.444 | -28.6% | 30.2% | 4.808 | 0.951 | 40 | 2.7% | 0.075 |
 | 60/40 VanEck | P0 calendar, FIFO | 8.4% | 5.6% | 0.489 | 0.298 | -25.3% | 22.2% | 2.909 | 2.489 | 0 | 0.0% | 0.000 |
 | 60/40 VanEck | P1 TAXOPT lots | 8.4% | 6.2% | 0.489 | 0.339 | -23.8% | 22.2% | 2.909 | 1.829 | 0 | 0.0% | 0.041 |
 | 60/40 VanEck | P2 + drift band 20% | 8.5% | 6.4% | 0.500 | 0.360 | -23.9% | 6.8% | 1.375 | 1.554 | 0 | 0.8% | 0.062 |
-| 60/40 VanEck | P3 + loss harvesting | 8.2% | 6.8% | 0.486 | 0.388 | -23.1% | 29.6% | 3.373 | 1.081 | 35 | 2.8% | 0.089 |
+| 60/40 VanEck | P3 + loss harvesting | 8.2% | 6.6% | 0.486 | 0.370 | -23.7% | 29.6% | 3.373 | 1.162 | 37 | 2.8% | 0.072 |
 | 60/40 SPY/BND | P0 calendar, FIFO | 9.2% | 7.4% | 0.617 | 0.477 | -22.1% | 10.7% | 0.563 | 1.343 | 0 | 0.0% | 0.000 |
 | 60/40 SPY/BND | P1 TAXOPT lots | 9.2% | 7.7% | 0.617 | 0.502 | -21.7% | 10.7% | 0.563 | 1.074 | 0 | 0.0% | 0.025 |
 | 60/40 SPY/BND | P2 + drift band 20% | 9.5% | 8.2% | 0.625 | 0.508 | -23.3% | 1.6% | 0.255 | 0.923 | 0 | 0.8% | 0.031 |
@@ -32,20 +32,20 @@ Policy ladder (pre- and post-tax, same OOS window; tracking error is against the
 | Drift x MinVar | P0 calendar, FIFO | 11.0% | 6.8% | 0.650 | 0.373 | -27.3% | 106.6% | 17.079 | 3.333 | 0 | 0.0% | 0.000 |
 | Drift x MinVar | P1 TAXOPT lots | 11.0% | 7.1% | 0.650 | 0.393 | -27.4% | 106.6% | 17.079 | 2.957 | 0 | 0.0% | 0.020 |
 | Drift x MinVar | P2 + drift band 20% | 10.7% | 7.1% | 0.634 | 0.393 | -27.4% | 91.2% | 14.744 | 2.745 | 0 | 0.5% | 0.020 |
-| Drift x MinVar | P3 + loss harvesting | 11.0% | 7.2% | 0.649 | 0.400 | -27.5% | 138.9% | 16.587 | 2.664 | 68 | 1.6% | 0.027 |
+| Drift x MinVar | P3 + loss harvesting | 10.8% | 7.2% | 0.634 | 0.403 | -27.5% | 135.0% | 17.257 | 2.659 | 63 | 1.5% | 0.030 |
 
 Sensitivities:
 
 | variant | portfolio | policy | sharpe_post | cagr_post | tax_pct_yr |
 |---|---|---|---|---|---|
 | short-term gains taxed at 46% | Equal weight | P0 calendar, FIFO | 0.367 | 6.9% | 2.568 |
-| short-term gains taxed at 46% | Equal weight | P3 + loss harvesting | 0.443 | 8.0% | 0.960 |
+| short-term gains taxed at 46% | Equal weight | P3 + loss harvesting | 0.443 | 8.0% | 0.959 |
 | short-term gains taxed at 46% | 60/40 VanEck | P0 calendar, FIFO | 0.296 | 5.5% | 2.516 |
-| short-term gains taxed at 46% | 60/40 VanEck | P3 + loss harvesting | 0.389 | 6.9% | 1.125 |
+| short-term gains taxed at 46% | 60/40 VanEck | P3 + loss harvesting | 0.368 | 6.6% | 1.192 |
 | harvesting without OUNZ/IAU | Equal weight | P0 calendar, FIFO | 0.369 | 6.9% | 2.544 |
-| harvesting without OUNZ/IAU | Equal weight | P3 without OUNZ/IAU pair | 0.461 | 8.2% | 0.973 |
+| harvesting without OUNZ/IAU | Equal weight | P3 without OUNZ/IAU pair | 0.463 | 8.2% | 0.940 |
 | harvesting without OUNZ/IAU | 60/40 VanEck | P0 calendar, FIFO | 0.298 | 5.6% | 2.489 |
-| harvesting without OUNZ/IAU | 60/40 VanEck | P3 without OUNZ/IAU pair | 0.388 | 6.8% | 1.081 |
+| harvesting without OUNZ/IAU | 60/40 VanEck | P3 without OUNZ/IAU pair | 0.370 | 6.6% | 1.162 |
 
 ## Extension 2 - statistical design (SPEC s.15)
 

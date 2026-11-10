@@ -3,7 +3,7 @@
     "P0 calendar, FIFO": 0.0706,
     "P1 TAXOPT lots": 0.0719,
     "P2 + drift band 20%": 0.083,
-    "P3 + loss harvesting": 0.0567
+    "P3 + loss harvesting": 0.0744
   },
   "gate1_pass_any_policy": false,
   "white_rc_p_primary": 0.8085957021489255,
@@ -16,15 +16,16 @@
     "MomentumxMaxSharpe": 0.0
   },
   "manifest": {
-    "run_id": "20261108T212002Z-bd0d8c",
-    "created_utc": "2026-11-08T21:20:02Z",
+    "run_id": "20261110T193557Z-39ea29",
+    "created_utc": "2026-11-10T19:35:57Z",
     "command": "extensions",
     "argv": [
       "extensions"
     ],
     "git": {
-      "sha": "ecb4abda3627d4b40ba5b84b7ccfb407c9d4500d",
+      "sha": "c3ca478bfd91478d87daec2176a59c96c37ea5df",
       "dirty": true,
+      "dirty_code": false,
       "branch": "claude/dazzling-dirac-6vvbh2"
     },
     "config_hash": "e691fafac8d70a1e",
