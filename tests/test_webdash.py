@@ -92,9 +92,12 @@ def test_exported_tables_carry_what_the_dashboard_reads(synth, tmp_path):
     assert sealed["state"] in ("sealed", "opened") and sealed["start"] == spec.holdout_start
     if sealed["state"] == "sealed":
         assert not table("study_tables", "holdout_summary") and not table("study_tables", "holdout_margin")
-    slip = table("operations", "shortfall")
+    slip, checks = table("operations", "shortfall"), table("operations", "risk_checks")
     wanted = {"signal_date", "gap_before", "gap_after", "scaled", "ordered_share", "explicit_bps", "delay_bps"}
-    assert slip and wanted <= set(slip[0])
-    assert {"check", "decisions", "passed", "warned", "blocked", "limit"} <= set(table("operations", "risk_checks")[0])
+    if any((webdash.ROOT / "paper" / "decisions").glob("*.json")):
+        assert slip and wanted <= set(slip[0])
+        assert {"check", "decisions", "passed", "warned", "blocked", "limit"} <= set(checks[0])
+    else:                                    # the container image ships without the paper book: the tables are empty
+        assert not slip and not checks
     meta = {r["key"]: r["value"] for r in table("study_tables", "meta")}
     assert meta["code_state"] in ("committed", "uncommitted code changes", "unknown")
