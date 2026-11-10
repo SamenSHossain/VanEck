@@ -96,8 +96,8 @@ calendar-year returns against 60/40 VanEck, Bonferroni alpha 0.0083.
 | None x MaxSharpe | 2.8% | 0.10 | -23.1% | 267%/yr | -3.3% | 0.89 | 0.81 |
 | Momentum x MinVar | 2.9% | 0.11 | -23.2% | 268%/yr | -3.3% | 0.89 | 0.80 |
 | Momentum x MaxSharpe | 2.7% | 0.10 | -23.5% | 278%/yr | -3.4% | 0.90 | 0.81 |
-| Drift x MinVar | 4.3% | 0.24 | -21.3% | 199%/yr | -1.4% | 0.71 | 0.69 |
-| Drift x MaxSharpe | 4.2% | 0.23 | -22.2% | 204%/yr | -1.6% | 0.73 | 0.70 |
+| Drift x MinVar | 4.3% | 0.24 | -21.2% | 199%/yr | -1.4% | 0.70 | 0.69 |
+| Drift x MaxSharpe | 4.2% | 0.22 | -22.3% | 204%/yr | -1.6% | 0.73 | 0.70 |
 
 Gate 2: **no winner**. Every strategy is below the 60/40 benchmark and far below
 equal weight after tax; the pre-tax picture is the same (p >= 0.75 for all six).
@@ -110,13 +110,18 @@ equal weight after tax; the pre-tax picture is the same (p >= 0.75 for all six).
 | None x MaxSharpe | 4.6% | 0.23 | -25.2% | 214%/yr | -1.2% | 0.77 | 0.69 |
 | Momentum x MinVar | 5.2% | 0.27 | -27.5% | 222%/yr | -0.6% | 0.67 | 0.55 |
 | Momentum x MaxSharpe | 5.2% | 0.26 | -27.7% | 233%/yr | -0.6% | 0.69 | 0.56 |
-| Drift x MinVar | 6.8% | 0.37 | -27.3% | 107%/yr | +1.4% | 0.19 | 0.16 |
-| Drift x MaxSharpe | 6.8% | 0.37 | -27.2% | 114%/yr | +1.4% | 0.16 | 0.15 |
+| Drift x MinVar | 6.8% | 0.37 | -27.3% | 106%/yr | +1.4% | 0.19 | 0.16 |
+| Drift x MaxSharpe | 6.8% | 0.37 | -27.2% | 113%/yr | +1.5% | 0.16 | 0.15 |
 
 Removing the overlay improves every strategy by 0.1 to 0.2 Sharpe. The two
 Drift rules are the only ones with a positive excess return over 60/40, and
 they merely tie equal weight after tax (Sharpe 0.37 vs 0.37) while trading five
 times as much. Nothing here is close to significance.
+
+Restated on 2026-11-10: equal drift scores are now ranked by a stated rule
+instead of by the sort a machine happens to use (SPEC section 20). The favoured
+funds changed in 2 of 91 rebalances, which moved the four Drift rows in the
+third decimal of Sharpe. No outcome changed.
 
 ## 5. Regimes (Phase 2.4)
 
@@ -132,14 +137,14 @@ and cannot be evaluated.
 | Equal weight | 2.28 | 0.73 | -1.67 | 1.41 |
 | 60/40 VanEck | 2.19 | 0.39 | -1.74 | 1.24 |
 | None x MinVar + regime | 2.18 | -0.20 | -1.59 | 1.08 |
-| Drift x MinVar + regime | 2.58 | -0.25 | -2.16 | 0.84 |
+| Drift x MinVar + regime | 2.58 | -0.25 | -2.15 | 0.83 |
 | Momentum x MaxSharpe + regime | 2.25 | -0.23 | -2.33 | 0.53 |
 
 | Max drawdown within regime days | Bull | Correction | Crisis | Neutral |
 |---|---|---|---|---|
 | Equal weight | -6.2% | -10.6% | -45.8% | -15.5% |
 | None x MinVar + regime | -3.6% | -5.9% | -31.3% | -8.3% |
-| Drift x MinVar + regime | -5.1% | -9.7% | -38.3% | -12.6% |
+| Drift x MinVar + regime | -5.1% | -9.7% | -38.2% | -12.6% |
 
 The overlay does what it says in Crisis: every strategy's Crisis drawdown is
 shallower than equal weight's (by 4 to 15 points), so all six pass the Gate 3
@@ -167,7 +172,7 @@ tolerance test. It pays for that everywhere else:
 ## 6. Why the plan's statistical gate could not have passed
 
 The pre-registered test uses seven annual observations. For the best
-diagnostic rule (Drift x MaxSharpe, +1.4% a year over 60/40) the standard
+diagnostic rule (Drift x MaxSharpe, +1.5% a year over 60/40) the standard
 deviation of the annual excess return is about 3.5%; detecting that edge
 one-sided at alpha 0.0083 with 80% power would need more than sixty years of
 data. Even the supplementary monthly test (90 observations) gives p of

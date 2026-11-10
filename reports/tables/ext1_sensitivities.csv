@@ -1,9 +1,9 @@
 variant,portfolio,policy,sharpe_post,cagr_post,tax_pct_yr
 short-term gains taxed at 46%,EqualWeight,"P0 calendar, FIFO",0.36658902906236623,0.06853936704118224,2.568238500318287
-short-term gains taxed at 46%,EqualWeight,P3 + loss harvesting,0.44326169866013787,0.08034025277594692,0.9589407358853704
+short-term gains taxed at 46%,EqualWeight,P3 + loss harvesting,0.44326169866013976,0.08034025277594692,0.9589407358853703
 short-term gains taxed at 46%,60/40 VanEck (60% EW equity funds / 40% BND),"P0 calendar, FIFO",0.295725888004663,0.055406277616683486,2.515707193868251
-short-term gains taxed at 46%,60/40 VanEck (60% EW equity funds / 40% BND),P3 + loss harvesting,0.3680647200817111,0.06586639678255723,1.191702681559198
+short-term gains taxed at 46%,60/40 VanEck (60% EW equity funds / 40% BND),P3 + loss harvesting,0.36806472008171237,0.06586639678255723,1.1917026815591982
 harvesting without OUNZ/IAU,EqualWeight,"P0 calendar, FIFO",0.36864493440434637,0.0688711036748133,2.5437886111800068
-harvesting without OUNZ/IAU,EqualWeight,P3 without OUNZ/IAU pair,0.4626906228420143,0.0823428938263715,0.939963154707148
+harvesting without OUNZ/IAU,EqualWeight,P3 without OUNZ/IAU pair,0.4626906228420098,0.0823428938263715,0.939963154707148
 harvesting without OUNZ/IAU,60/40 VanEck (60% EW equity funds / 40% BND),"P0 calendar, FIFO",0.2980764824204135,0.05575402336306157,2.4889159883886007
-harvesting without OUNZ/IAU,60/40 VanEck (60% EW equity funds / 40% BND),P3 without OUNZ/IAU pair,0.3696484477368231,0.06611284619014546,1.1620612869866156
+harvesting without OUNZ/IAU,60/40 VanEck (60% EW equity funds / 40% BND),P3 without OUNZ/IAU pair,0.3696484477368205,0.06611284619014546,1.1620612869866163

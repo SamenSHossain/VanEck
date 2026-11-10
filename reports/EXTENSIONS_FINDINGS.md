@@ -50,7 +50,10 @@ with a planner that dropped the 31-day no-rebuy window once a fund had been
 sold out completely (SPEC section 14, correction note). With the rule applied
 as written, 8 of the 64 frozen ladder values moved, all in the P3 column:
 60/40 VanEck 0.39 to 0.37, the P3 margin 0.06 to 0.07, equal weight's loss
-sales 43 to 40. P0 to P2 and the other two extensions are unchanged.
+sales 43 to 40. Separately, equal drift scores are now ranked by a stated rule
+(SPEC section 20). That moved the Drift x MinVar rows of sections 1 and 3 and
+the Drift figures of section 2 in the third decimal: 67 years became 64, 43
+bps became 42. No outcome changed.
 
 ## 2. Statistical design: the original test could not have passed
 
@@ -61,8 +64,8 @@ sales 43 to 40. P0 to P2 and the other two extensions are unchanged.
 | Drift rules, monthly Newey-West test (n = 90), Bonferroni | about 4% | about 3% |
 
 The plan's decisive test needed an edge larger than the equity risk premium to
-reject. The best rule in the study (Drift x MaxSharpe without overlay, +1.4% a
-year over 60/40) would need 67 years of data under the annual test.
+reject. The best rule in the study (Drift x MaxSharpe without overlay, +1.5% a
+year over 60/40) would need 64 years of data under the annual test.
 
 | Drift x MaxSharpe (no overlay) | Value |
 |---|---|
@@ -87,7 +90,7 @@ Bonferroni on seven annual points.
 |---|---|---|---|---|
 | Equal weight | 10 bps/yr | 63 bps/yr | $3M | tracking (participation cap) |
 | 60/40 VanEck | 9 bps/yr | 64 bps/yr | $3M | tracking |
-| Drift x MinVar | 43 bps/yr | 106 bps/yr | below $1M | drag (turnover) and tracking |
+| Drift x MinVar | 42 bps/yr | 106 bps/yr | below $1M | drag (turnover) and tracking |
 | Momentum x MaxSharpe | 75 bps/yr | 217 bps/yr | below $1M | drag and tracking |
 
 * **The baselines are liquidity-bound, not cost-bound.** Even at $1 billion the

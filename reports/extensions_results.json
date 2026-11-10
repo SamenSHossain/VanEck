@@ -7,7 +7,7 @@
   },
   "gate1_pass_any_policy": false,
   "white_rc_p_primary": 0.8085957021489255,
-  "white_rc_p_all": 0.35132433783108447,
+  "white_rc_p_all": 0.34832583708145926,
   "romano_wolf_rejections": [],
   "capacity_aum": {
     "EqualWeight": 3000000.0,
@@ -16,14 +16,14 @@
     "MomentumxMaxSharpe": 0.0
   },
   "manifest": {
-    "run_id": "20261110T193557Z-39ea29",
-    "created_utc": "2026-11-10T19:35:57Z",
+    "run_id": "20261110T200118Z-60e0ba",
+    "created_utc": "2026-11-10T20:01:18Z",
     "command": "extensions",
     "argv": [
       "extensions"
     ],
     "git": {
-      "sha": "c3ca478bfd91478d87daec2176a59c96c37ea5df",
+      "sha": "bd4061f37718ae8ca09fc469da4159ba9acda29f",
       "dirty": true,
       "dirty_code": false,
       "branch": "claude/dazzling-dirac-6vvbh2"
