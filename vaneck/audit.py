@@ -23,15 +23,17 @@ def new_run_id() -> str:
 
 
 def git_info(root: Path = ROOT) -> dict:
-    def _run(*args: str) -> str | None:
+    def _run(*args: str, strip: bool = True) -> str | None:
         try:
-            return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,
-                                  check=True, timeout=10).stdout.strip()
+            out = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,
+                                 check=True, timeout=10).stdout
+            return out.strip() if strip else out
         except Exception:  # noqa: BLE001 - git may be absent
             return None
 
     sha = _run("rev-parse", "HEAD")
-    status = _run("status", "--porcelain")
+    # not stripped: a porcelain line starts with two status columns, and the first may be a space
+    status = _run("status", "--porcelain", strip=False)
     return {"sha": sha, "dirty": bool(status) if status is not None else None,
             "dirty_code": code_dirty(status) if status is not None else None,
             "branch": _run("rev-parse", "--abbrev-ref", "HEAD")}

@@ -85,3 +85,24 @@ def test_data_files_hashes_each_csv(tmp_path):
     files = audit.data_files(tmp_path)
     assert sorted(files) == ["A.csv", "B.csv"] and files["A.csv"]["bytes"] == 4
     assert len(files["A.csv"]["sha256"]) == 12 and files["A.csv"]["sha256"] != files["B.csv"]["sha256"]
+
+
+def test_git_info_reads_the_first_status_line_whole(monkeypatch):
+    """A change that is not staged starts its status line with a space; stripping the output shifted that path."""
+    import subprocess
+    from types import SimpleNamespace
+
+    def fake_git(porcelain):
+        def run(cmd, **kwargs):
+            out = {"status": porcelain, "rev-parse": "abc123\n"}[cmd[1]]
+            return SimpleNamespace(stdout=out)
+        return run
+
+    monkeypatch.setattr(subprocess, "run", fake_git(" M reports/EXTENSIONS.md\n M reports/tables/ext1_policy_ladder.csv\n"))
+    info = audit.git_info()
+    assert info["sha"] == "abc123" and info["dirty"] is True and info["dirty_code"] is False
+    monkeypatch.setattr(subprocess, "run", fake_git(" M vaneck/audit.py\n"))
+    assert audit.git_info()["dirty_code"] is True
+    monkeypatch.setattr(subprocess, "run", fake_git(""))
+    info = audit.git_info()
+    assert info["dirty"] is False and info["dirty_code"] is False
