@@ -310,3 +310,25 @@ with a recorded reason. "Review" raises an alert and is recorded. A rule that
 has fewer observations than it needs reports "insufficient history" and does
 not fire. With the paper rehearsal (12 months) R1 and R2 can fire; R3 needs at
 least 14 months of marks.
+
+## 18. Dashboard diagnostics (descriptive, added after the results were known)
+
+The interactive dashboard shows a few quantities that were not in the plan or
+in sections 14 to 16. They were added on 2026-11-10, after every result above
+had been seen. They describe the results; no gate, test or retirement rule
+depends on them, and none of them is a new hypothesis test.
+
+| Display | Definition |
+|---|---|
+| Gate 1 margin interval | 95% percentile interval of the post-tax Sharpe difference, equal weight minus each 60/40 benchmark, from the paired moving-block bootstrap of section 10 (daily returns, 21-day blocks, 2,000 draws, seed 0). The same routine already gives the supplementary Sharpe intervals of the Phase 2 strategies. Also shown: the share of draws at or above the Gate 1 requirement of +0.20. |
+| Rolling 12-month edge | Trailing 252-trading-day post-tax return and Sharpe ratio (daily excess returns, annualised) of equal weight and the six locked rules, minus those of 60/40 VanEck, sampled at month ends. Neighbouring windows share most of their days, so counts of windows "ahead" are not independent observations. |
+| Target weights | The weights each strategy decided at every rebalance, cash as the residual, with the regime the overlay saw on the signal date. |
+| Assumption table | The main study's sensitivity runs (flat 4% cash, HIFO lots, no distribution tax, quarterly rebalancing of equal weight) restated as the Gate 1 margin under each assumption. |
+| Paper book against the bands | Calendar-month returns and the drawdown path of the paper book against the frozen expectation values of section 17. The rule verdicts still come from `vaneck/retire.py`. |
+| Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of every artefact the dashboard reads. |
+
+A reading of the first row, for the record: the interval for equal weight
+against 60/40 VanEck is about -0.04 to +0.18. It includes zero and lies below
+the +0.20 the plan required, so on this sample the Gate 1 failure is not a
+near miss, and the lead itself is not distinguishable from zero. This is a
+description of the same data that decided Gate 1, not additional evidence.

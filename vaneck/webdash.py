@@ -1,6 +1,7 @@
 """Collect everything the interactive dashboard shows into one JSON document."""
 from __future__ import annotations
 
+import inspect
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -9,13 +10,18 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from . import audit, metrics, study
+from . import audit, design, metrics, retire, study
+from .calendar import Split
 from .config import REPORT_DIR, ROOT, SPEC, UNIVERSE, Spec
 from .data import MarketData
-from .regimes import episodes
+from .regimes import episodes, regime_at
+from .stats import bootstrap_sharpe_diff
 from .universe import run_gate0
 
 TABLES = REPORT_DIR / "tables"
+EDGE_WINDOW = metrics.TRADING_DAYS   # trading days in the rolling 12-month edge
+BOOT_BLOCK = int(inspect.signature(bootstrap_sharpe_diff).parameters["block"].default)   # the block every interval here uses
+CLASSIC_BENCHMARK = "60/40 Classic (SPY/BND)"
 
 
 def _records(df: pd.DataFrame, index_name: str = "name") -> list[dict]:
@@ -92,7 +98,117 @@ def _json(path: Path):
     return json.loads(path.read_text()) if path.exists() else None
 
 
-def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit.xml") -> dict:
+def margin_interval(run: study.Run, bench: study.Run, spec: Spec = SPEC, n_boot: int = 2000) -> dict:
+    """Bootstrap interval of a portfolio's post-tax Sharpe margin over a benchmark, the statistic Gate 1 decides on.
+
+    Columns are named as in ``study.phase2_tests`` so both can be drawn on one axis. ``share_ge_threshold`` is the
+    share of resamples whose margin reaches the Gate 1 requirement.
+    """
+    bs = bootstrap_sharpe_diff(run.post.nav, bench.post.nav, run.post.rf, n_boot=n_boot, return_draws=True)
+    draws = bs["draws"]
+    return {"portfolio": run.name, "benchmark": bench.name, "sharpe_diff": bs["sharpe_diff"],
+            "sharpe_diff_ci_low": bs["ci_low"], "sharpe_diff_ci_high": bs["ci_high"], "p_bootstrap_sharpe": bs["p_one_sided"],
+            "threshold": spec.gate1_sharpe_margin, "share_ge_threshold": float(np.mean(draws >= spec.gate1_sharpe_margin)),
+            "n_boot": int(n_boot), "block_days": BOOT_BLOCK}
+
+
+def rolling_edge(runs: dict[str, study.Run], bench: study.Run, window: int = EDGE_WINDOW) -> list[dict]:
+    """Month-end samples of each run's trailing ``window``-day post-tax return and Sharpe ratio minus the benchmark's."""
+    def trailing(sim) -> tuple[pd.Series, pd.Series]:
+        ex = metrics.excess_returns(sim.nav, sim.rf)
+        roll = ex.rolling(window)
+        return sim.nav / sim.nav.shift(window) - 1.0, roll.mean() / roll.std(ddof=1) * np.sqrt(metrics.TRADING_DAYS)
+
+    b_ret, b_sharpe = trailing(bench.post)
+    rows: list[dict] = []
+    for name, r in runs.items():
+        ret, sharpe = trailing(r.post)
+        df = pd.DataFrame({"excess_12m": ret - b_ret, "sharpe_diff_12m": sharpe - b_sharpe}).dropna()
+        df = df.resample("ME").last().dropna()
+        rows += [{"date": d.strftime("%Y-%m-%d"), "run": name, "kind": r.kind, "excess_12m": round(float(e), 5),
+                  "sharpe_diff_12m": round(float(sd), 4)} for d, e, sd in zip(df.index, df["excess_12m"], df["sharpe_diff_12m"])]
+    return rows
+
+
+def weight_paths(md: MarketData, splits: list[Split], runs: dict[str, study.Run], spec: Spec = SPEC) -> list[dict]:
+    """Target weights decided at each rebalance: one wide row per run and date, cash as the residual.
+
+    ``regime`` is the regime the overlay saw on the signal date (the same call the strategies make).
+    """
+    seen = {s.exec_date: (s.signal_date, regime_at(md.window(end=s.signal_date, start=s.train_start).macro, spec))
+            for s in splits}
+    first = next(iter(runs.values())).pre.targets
+    cols = [c for c in first.columns if any((r.pre.targets[c].abs() > 1e-9).any() for r in runs.values())]
+    rows: list[dict] = []
+    for name, r in runs.items():
+        for d, w in r.pre.targets[cols].iterrows():
+            signal, regime = seen.get(d, (None, None))
+            row: dict = {"run": name, "kind": r.kind, "date": d.strftime("%Y-%m-%d"),
+                         "signal_date": signal.strftime("%Y-%m-%d") if signal is not None else None, "regime": regime}
+            row.update({c: round(float(w[c]), 4) for c in cols})
+            row["CASH"] = round(max(0.0, 1.0 - float(w.sum())), 4)
+            rows.append(row)
+    return rows
+
+
+def book_bands(marks: list[tuple[str, float]]) -> dict:
+    """Calendar-month returns (the retirement rules' own definition) and the drawdown path of a book's daily marks."""
+    if not marks:
+        return {"monthly": [], "drawdown": []}
+    curve = pd.Series({pd.Timestamp(k): float(v) for k, v in marks}).sort_index()
+    monthly = retire.monthly_returns(curve)
+    dd = curve / curve.cummax() - 1.0
+    return {"monthly": [{"month": d.strftime("%Y-%m"), "ret": round(float(v), 6)} for d, v in monthly.items()],
+            "drawdown": [round(float(v), 5) for v in dd.to_numpy()]}
+
+
+def golden_check(md: MarketData, spec: Spec, base: dict, strat: dict, diag: dict) -> dict | None:
+    """Frozen golden results against the current engine: input hashes, per-table reproduction, package versions."""
+    from . import golden
+    if not (golden.GOLDEN_DIR / "manifest.json").exists():
+        return None
+    manifest, frames = golden.load()
+    changed = golden.inputs_changed(manifest, spec)
+    files = golden.detail(golden.compute(md, spec, base=base, strat=strat, diag=diag), frames)
+    reproduced = all(f["ok"] for f in files)
+    now = audit.package_versions()
+    return {"status": "inputs changed" if changed else ("match" if reproduced else "regression"),
+            "checked_utc": audit.utc_now(), "frozen_utc": manifest["created_utc"],
+            "config_hash_frozen": manifest["config_hash"], "config_hash_current": audit.config_hash(spec),
+            "data_hash_frozen": manifest["data_hash"], "data_hash_current": audit.data_hash(),
+            "values": sum(f["values"] for f in files), "reproduced": sum(f["matching"] for f in files),
+            "rtol": manifest["rtol"], "atol": manifest["atol"], "files": files,
+            "versions": [{"package": k, "frozen": v, "current": now.get(k), "same": now.get(k) == v}
+                         for k, v in manifest["versions"].items()]}
+
+
+def provenance(manifest: dict, golden: dict | None) -> list[dict]:
+    """Each stored artefact the dashboard reads, with the input hashes it was produced from."""
+    current = (manifest["config_hash"], manifest["data_hash"])
+
+    def row(artefact: str, created, config, data) -> dict:
+        return {"artefact": artefact, "created_utc": created, "config_hash": config, "data_hash": data,
+                "same_inputs": (config, data) == current}
+
+    rows = [row("this export (study results recomputed)", manifest["created_utc"], *current)]
+    report = _json(REPORT_DIR / "run_manifest.json")
+    if report:
+        rows.append(row("main report (gate verdicts, sensitivities)", report.get("created_utc"), report.get("config_hash"),
+                        report.get("data_hash")))
+    ext = (_json(REPORT_DIR / "extensions_results.json") or {}).get("manifest")
+    if ext:
+        rows.append(row("extensions report tables", ext.get("created_utc"), ext.get("config_hash"), ext.get("data_hash")))
+    if golden:
+        rows.append(row("frozen golden results", golden["frozen_utc"], golden["config_hash_frozen"], golden["data_hash_frozen"]))
+    exp = _json(ROOT / "paper" / "expectations_EqualWeight.json")
+    if exp:
+        rows.append(row("paper-book expectation bands", exp.get("frozen_utc"), exp.get("config_hash"), exp.get("data_hash")))
+    return rows
+
+
+def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit.xml", n_boot: int = 2000,
+            check_golden: bool = True) -> dict:
+    """Everything the dashboard shows. ``n_boot`` matches the report's default so both give the same bootstrap figures."""
     splits = study.make_splits(md, spec)
     base = study.run_baselines(md, splits, spec)
     strat = study.run_strategies(md, splits, spec, overlay=True)
@@ -114,9 +230,14 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
             reg_rows.append({"run": name, "regime": reg, "days": int(row["days"]), "sharpe": float(row["sharpe"]),
                              "ann_return": float(row["ann_return"]), "mdd_concat": float(row["mdd_concat"])})
     bench = base[study.PRIMARY_BENCHMARK]
-    tests_post = study.phase2_tests(strat, bench, spec, taxed=True, n_boot=500)
-    tests_diag = study.phase2_tests(diag, bench, spec, taxed=True, n_boot=500)
+    tests_post = study.phase2_tests(strat, bench, spec, taxed=True, n_boot=n_boot)
+    tests_diag = study.phase2_tests(diag, bench, spec, taxed=True, n_boot=n_boot)
     annual = study.annual_returns_table(runs)
+    ew = base["EqualWeight"]
+    margins = [margin_interval(ew, base[b], spec, n_boot) for b in (study.PRIMARY_BENCHMARK, CLASSIC_BENCHMARK) if b in base]
+    edge = rolling_edge({"EqualWeight": ew, **strat}, bench)
+    weights = weight_paths(md, splits, {**strat, **diag}, spec)
+    golden = golden_check(md, spec, base, strat, diag) if check_golden else None
 
     book = _json(ROOT / "paper" / "book.json")
     marks = sorted((book or {}).get("marks", {}).items())
@@ -136,14 +257,17 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
     annual_json = {c: [None if pd.isna(v) else round(float(v), 4) for v in annual[c]] for c in annual.columns}
     book_json = None
     if book:
+        bands = book_bands(marks)
         book_json = {"name": book.get("name"), "as_of": book.get("as_of"), "initial_cash": book.get("initial_cash"),
                      "dates": [k for k, _ in marks], "equity": [round(float(v), 2) for _, v in marks],
+                     "drawdown": bands["drawdown"], "monthly": bands["monthly"],
                      "fills": len(book.get("fills", [])), "realized_by_year": book.get("realized_by_year"),
                      "tax_liability_accrued": book.get("tax_liability_accrued")}
     ext_names = ("ext1_policy_ladder", "ext1_gate1_margins", "ext1_sensitivities", "ext2_power", "ext2_hac",
                  "ext2_dsr12", "ext2_rw12", "ext2_rw6", "ext3_capacity_curve", "ext3_capacity")
-    extensions = {n.split("_", 1)[1]: _csv(n) for n in ext_names}
+    extensions: dict[str, Any] = {n.split("_", 1)[1]: _csv(n) for n in ext_names}
     extensions["results"] = _json(REPORT_DIR / "extensions_results.json")
+    extensions["family_alpha"] = design.RW_ALPHA
     rolling = g0.rolling_avg.resample("W-FRI").last().dropna()
     return {
         "meta": {"generated_utc": manifest["created_utc"], "git": manifest["git"], "config_hash": manifest["config_hash"],
@@ -160,19 +284,24 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
                   "checks": _records(g0.summary_table(), "check"), "clusters": _records(g0.clusters, "ticker"),
                   "rolling_dates": [d.strftime("%Y-%m-%d") for d in rolling.index],
                   "rolling_avg": [round(float(v), 4) for v in rolling.to_numpy()], "threshold": spec.gate0_avg_corr_max},
-        "gate1": {"checks": _records(study.gate1(base, spec), "criterion"), "summary": _records(study.summary_table(base))},
+        "gate1": {"checks": _records(study.gate1(base, spec), "criterion"), "summary": _records(study.summary_table(base)),
+                  "margins": margins, "rolling_edge": edge, "edge_window_days": EDGE_WINDOW,
+                  "sensitivities": _csv("sensitivities")},
         "phase2": {"summary": _records(study.summary_table({**strat, **diag})),
                    "tests_post": _records(tests_post, "strategy"), "tests_diag": _records(tests_diag, "strategy"),
                    "regime_share": regimes.value_counts(normalize=True).round(4).to_dict(), "regime_rows": reg_rows,
                    "episodes": _records(episodes(regimes).query("days >= 10"), "i")},
         "annual": {"years": [int(y) for y in annual.index], "returns": annual_json},
         "nav": {"weeks": weeks, "series": nav},
+        "weights": weights,
         "extensions": extensions,
         "operations": {"book": book_json, "decisions": decisions,
                        "monitor": _json(REPORT_DIR / "monitor_EqualWeight.json"), "health": _json(REPORT_DIR / "health.json"),
                        "expectations": _json(ROOT / "paper" / "expectations_EqualWeight.json"), "timeline": _store_timeline(),
                        "crossval": {k: _csv(f"crossval_{k}") for k in ("macro", "peers", "corporate_actions")}},
         "tests": _junit(junit),
+        "golden": golden,
+        "provenance": provenance(manifest, golden),
     }
 
 
@@ -198,9 +327,10 @@ def _drop(recs: list[dict], *cols: str) -> list[dict]:
 
 
 def tables(payload: dict) -> dict[str, list[dict]]:
-    """Reshape ``collect``'s document into five flat row tables, one JSON file each.
+    """Reshape ``collect``'s document into flat row tables, one JSON file each.
 
-    Every row carries a ``table`` column; the dashboard page splits a file into its tables with ``dash.calc``.
+    Every row of the first five carries a ``table`` column; the dashboard page splits a file into its tables with
+    ``dash.calc``. ``weights`` is one table: a row per strategy and rebalance, a column per holding.
     """
     m, g = payload["meta"], payload["gates"] or {}
     g0, g1, p2, an = payload["gate0"], payload["gate1"], payload["phase2"], payload["annual"]
@@ -213,7 +343,7 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     study_rows += _kv("gates", {"gate0": _PF.get(g.get("gate0"), "unknown"), "gate1": _PF.get(g.get("gate1"), "unknown"),
                                 "gate2": _PF.get(g.get("gate2"), "unknown"),
                                 "gate2_winners": ", ".join(g.get("gate2_winners") or []) or "none"})
-    study_rows += _kv("config", m.get("config"))
+    study_rows += _kv("config", {**(m.get("config") or {}), "edge_window_days": g1.get("edge_window_days")})
     study_rows += _rows("gate0_checks", g0["checks"]) + _rows("gate0_clusters", g0["clusters"])
     tick = g0["corr"]["tickers"]
     study_rows += [{"table": "gate0_corr", "a": a, "b": b, "rho": g0["corr"]["matrix"][i][j]}
@@ -221,6 +351,10 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     study_rows += [{"table": "gate0_rolling", "date": d, "avg": v} for d, v in zip(g0["rolling_dates"], g0["rolling_avg"])]
     study_rows += _kv("gate0_params", {"threshold": g0["threshold"]})
     study_rows += _rows("gate1_checks", g1["checks"]) + _rows("gate1_summary", g1["summary"])
+    study_rows += _rows("gate1_margin", g1.get("margins"))
+    study_rows += _rows("rolling_edge", g1.get("rolling_edge"))
+    keep = ("variant", "name", "sharpe_pre", "sharpe_post", "cagr_post", "mdd_post", "turnover_pre", "tax_pct_yr")
+    study_rows += _rows("sensitivities", [{k: r.get(k) for k in keep} for r in g1.get("sensitivities") or []])
     study_rows += _rows("phase2_summary", p2["summary"])
     study_rows += _rows("phase2_tests", [{"family": "primary", **x} for x in p2["tests_post"]]
                         + [{"family": "diagnostic", **x} for x in p2["tests_diag"]])
@@ -245,6 +379,7 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     ext_rows += _kv("results", {"gate1_pass_any_policy": res.get("gate1_pass_any_policy"),
                                 "white_rc_p_primary": res.get("white_rc_p_primary"), "white_rc_p_all": res.get("white_rc_p_all"),
                                 "romano_wolf_rejections": ", ".join(res.get("romano_wolf_rejections") or []) or "none",
+                                "family_alpha": ex.get("family_alpha"),
                                 **{f"margin_{k}": v for k, v in (res.get("gate1_margin_by_policy") or {}).items()},
                                 **{f"capacity_{k}": v for k, v in (res.get("capacity_aum") or {}).items()}})
 
@@ -254,7 +389,10 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     h = op["health"] or {}
     cv = op["crossval"] or {}
     op_rows: list[dict] = []
-    op_rows += [{"table": "book", "date": d, "equity": e} for d, e in zip(b.get("dates", []), b.get("equity", []))]
+    dates, equity = b.get("dates", []), b.get("equity", [])
+    op_rows += [{"table": "book", "date": d, "equity": e, "dd": x}
+                for d, e, x in zip(dates, equity, b.get("drawdown") or [None] * len(dates))]
+    op_rows += _rows("book_monthly", b.get("monthly"))
     op_rows += _kv("book_meta", {"name": b.get("name"), "as_of": b.get("as_of"), "initial_cash": b.get("initial_cash"),
                                  "fills": b.get("fills"), "tax_liability_accrued": b.get("tax_liability_accrued"),
                                  **{f"realized_{k}": v for k, v in (b.get("realized_by_year") or {}).items()}})
@@ -276,13 +414,19 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     test_rows: list[dict] = _kv("summary", {k: ts.get(k) for k in ("total", "passed", "failed", "skipped", "time")})
     test_rows += _rows("files", _drop(ts.get("files") or [], "tests"))
     test_rows += _rows("cases", [{"file": f["file"], **c} for f in ts.get("files") or [] for c in f["tests"]])
-    return {"study_tables": study_rows, "nav_weekly": nav_rows, "extensions": ext_rows, "operations": op_rows, "tests": test_rows}
+    gold = payload.get("golden") or {}
+    test_rows += _kv("golden", {k: v for k, v in gold.items() if k not in ("files", "versions")})
+    test_rows += _rows("golden_files", gold.get("files"))
+    test_rows += _rows("versions", gold.get("versions"))
+    test_rows += _rows("provenance", payload.get("provenance"))
+    return {"study_tables": study_rows, "nav_weekly": nav_rows, "extensions": ext_rows, "operations": op_rows,
+            "tests": test_rows, "weights": payload.get("weights") or []}
 
 
 def write(md: MarketData, out: Path = REPORT_DIR / "dashboard_data.json", spec: Spec = SPEC,
-          junit: Path = REPORT_DIR / "junit.xml") -> list[Path]:
-    """Write the full document and, beside it in ``dashboard/``, the five row tables the dashboard page reads."""
-    payload = collect(md, spec, junit)
+          junit: Path = REPORT_DIR / "junit.xml", n_boot: int = 2000, check_golden: bool = True) -> list[Path]:
+    """Write the full document and, beside it in ``dashboard/``, the row tables the dashboard page reads."""
+    payload = collect(md, spec, junit, n_boot=n_boot, check_golden=check_golden)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, default=str))
     folder = out.parent / "dashboard"

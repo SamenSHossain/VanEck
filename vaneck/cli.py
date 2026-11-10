@@ -522,7 +522,7 @@ def cmd_dashboard(args):
 def cmd_webdash(args):
     from . import webdash
     md = data.build_market_data()
-    paths = webdash.write(md, Path(args.out), junit=Path(args.junit))
+    paths = webdash.write(md, Path(args.out), junit=Path(args.junit), n_boot=args.boot, check_golden=not args.skip_golden)
     for q in paths:
         print(f"written {q}")
     return 0
@@ -800,6 +800,8 @@ def main(argv=None) -> int:
     wd = sub.add_parser("webdash", help="collect results, operations state and test outcomes into the dashboard's data files")
     wd.add_argument("--out", default=str(REPORT_DIR / "dashboard_data.json"))
     wd.add_argument("--junit", default=str(REPORT_DIR / "junit.xml"), help="pytest --junitxml report to summarise")
+    wd.add_argument("--boot", type=int, default=2000, help="bootstrap draws (the report's default, so figures agree)")
+    wd.add_argument("--skip-golden", action="store_true", help="leave out the frozen-results check (faster)")
     wd.set_defaults(func=cmd_webdash)
 
     args = p.parse_args(argv)

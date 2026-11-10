@@ -57,7 +57,7 @@ for the runbook.
 | `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
 | `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
 | `python -m vaneck status` / `history` / `dashboard` | latest state (exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
-| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the five row tables in `reports/dashboard/` that feed the interactive results dashboard (Gate 0, Gate 1, Phase 2, extensions, operations, tests) |
+| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, and a frozen-results check with the hashes behind every table (`--boot N`, `--skip-golden`; SPEC section 18) |
 | `python -m vaneck approve <run_id> --by NAME` / `halt on|off --reason R` / `limits show|propose|approve` | approvals as code: a dry run must be approved before `--submit`; global halt; two-person risk-limit changes |
 | `python -m vaneck broker check` / `reconcile [--adopt]` / `rebalance --broker alpaca --submit` | venue connectivity, shadow-vs-venue reconciliation, execution at Alpaca with the local book as shadow ledger |
 | `python -m vaneck expectations --strategy S` / `retire show|clear` | freeze retirement expectation bands (SPEC s.17); inspect or clear a retirement flag |

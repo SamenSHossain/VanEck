@@ -18,6 +18,8 @@ from .stats import (
     romano_wolf,
 )
 
+RW_ALPHA = 0.05  # family-wise level of the Romano-Wolf stepdown and of White's reality check
+
 
 def _monthly_excess_over_cash(nav: pd.Series, rf: pd.Series) -> pd.Series:
     m = monthly_returns(nav)
@@ -78,8 +80,8 @@ def design_report(md: MarketData, splits: list[Split], spec: Spec = SPEC, n_boot
     dsr12 = dsr12.join(psr_diff)
 
     # ---- D. Romano-Wolf -------------------------------------------------------- #
-    rw6 = romano_wolf(mon_diff[list(strat)], n_boot=n_boot, block=block, seed=0, alpha=0.05)
-    rw12 = romano_wolf(mon_diff, n_boot=n_boot, block=block, seed=0, alpha=0.05)
+    rw6 = romano_wolf(mon_diff[list(strat)], n_boot=n_boot, block=block, seed=0, alpha=RW_ALPHA)
+    rw12 = romano_wolf(mon_diff, n_boot=n_boot, block=block, seed=0, alpha=RW_ALPHA)
 
     return {"power": power, "hac": hac, "dsr6": dsr6, "dsr12": dsr12, "rw6": rw6, "rw12": rw12,
             "meta": {"benchmark": study.PRIMARY_BENCHMARK, "alpha_bonferroni": alpha_b, "n_boot": n_boot, "block": block,

@@ -33,8 +33,12 @@ def monthly_test(nav_x: pd.Series, nav_y: pd.Series) -> dict:
 
 
 def bootstrap_sharpe_diff(nav_x: pd.Series, nav_y: pd.Series, rf: pd.Series, n_boot: int = 2000,
-                          block: int = 21, seed: int = 0) -> dict:
-    """Paired moving-block bootstrap of the annualized Sharpe difference (one-sided p)."""
+                          block: int = 21, seed: int = 0, return_draws: bool = False) -> dict:
+    """Paired moving-block bootstrap of the annualized Sharpe difference (one-sided p).
+
+    ``return_draws`` adds the resampled differences under ``draws``, for a caller that needs another
+    functional of the same distribution (the share of draws at or above a required margin, say).
+    """
     ex = excess_returns(nav_x, rf)
     ey = excess_returns(nav_y, rf).reindex(ex.index)
     ex, ey = ex.to_numpy(), ey.to_numpy()
@@ -53,8 +57,11 @@ def bootstrap_sharpe_diff(nav_x: pd.Series, nav_y: pd.Series, rf: pd.Series, n_b
         idx = (starts[:, None] + np.arange(block)[None, :]).ravel()[:n]
         diffs[b] = sh(ex[idx]) - sh(ey[idx])
     p = float(np.mean(diffs <= 0.0))
-    return {"sharpe_diff": float(obs), "p_one_sided": p,
-            "ci_low": float(np.percentile(diffs, 2.5)), "ci_high": float(np.percentile(diffs, 97.5))}
+    out: dict = {"sharpe_diff": float(obs), "p_one_sided": p,
+                 "ci_low": float(np.percentile(diffs, 2.5)), "ci_high": float(np.percentile(diffs, 97.5))}
+    if return_draws:
+        out["draws"] = diffs
+    return out
 
 
 def bonferroni_table(results: dict[str, dict], spec: Spec = SPEC) -> pd.DataFrame:

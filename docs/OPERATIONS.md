@@ -151,10 +151,22 @@ decision and any monitor alert are delivered to the webhook in
 `make webdash` runs the test suite with a JUnit report and then
 `python -m vaneck webdash`, which collects the study results, the
 extensions, the paper book, decision records, monitor and health state
-and the test outcomes into `reports/dashboard_data.json` and five flat
-row tables under `reports/dashboard/`. Those tables are the data behind
-the interactive results dashboard; after a new run, re-attach them to
-the dashboard so its figures match the committed results.
+and the test outcomes into `reports/dashboard_data.json` and flat row
+tables under `reports/dashboard/`. Those tables are the data behind the
+interactive results dashboard; after a new run, re-attach them to the
+dashboard so its figures match the committed results.
+
+The export also carries what the dashboard needs to show uncertainty and
+feedback (SPEC section 18): bootstrap intervals for the Gate 1 margin and
+the strategies (2,000 draws by default, the report's figure; `--boot N`
+changes it), the rolling 12-month edge, the target weights at every
+rebalance, the paper book's monthly returns and drawdown beside the
+frozen expectation values, and a frozen-results check. That check
+recomputes the golden tables with the current engine and records, per
+table, how many values reproduce, together with the configuration and
+data hashes of every stored artefact the page reads. It adds about half
+a minute; `--skip-golden` leaves it out, and the dashboard then shows no
+reproducibility status.
 
 ## Type checking, packaging, container
 
