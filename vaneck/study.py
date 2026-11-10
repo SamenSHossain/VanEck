@@ -14,11 +14,12 @@ from .costs import CostModel
 from .data import MarketData
 from .portfolio import SimResult, build_targets, simulate
 from .regimes import regime_calendar
-from .stats import annual_test, bonferroni_table, bootstrap_sharpe_diff, monthly_test
+from .stats import BOOT_BLOCK, annual_test, bonferroni_table, bootstrap_sharpe_diff, monthly_test
 from .strategies import make_strategy, strategy_grid, strategy_name
 
 TRADEABLES = list(UNIVERSE) + list(AUX_TICKERS)
 PRIMARY_BENCHMARK = "60/40 VanEck (60% EW equity funds / 40% BND)"
+CLASSIC_BENCHMARK = "60/40 Classic (SPY/BND)"
 
 
 @dataclass
@@ -137,6 +138,20 @@ def phase2_tests(strategies: dict[str, Run], benchmark: Run, spec: Spec = SPEC,
     tbl["benchmark"] = benchmark.name
     tbl["basis"] = "post-tax" if taxed else "pre-tax"
     return tbl
+
+
+def margin_interval(run: Run, bench: Run, spec: Spec = SPEC, n_boot: int = 2000) -> dict:
+    """Bootstrap interval of a portfolio's post-tax Sharpe margin over a benchmark, the statistic Gate 1 decides on.
+
+    Columns are named as in :func:`phase2_tests` so both can be drawn on one axis. ``share_ge_threshold`` is the
+    share of resamples whose margin reaches the Gate 1 requirement.
+    """
+    bs = bootstrap_sharpe_diff(run.post.nav, bench.post.nav, run.post.rf, n_boot=n_boot, return_draws=True)
+    draws = bs["draws"]
+    return {"portfolio": run.name, "benchmark": bench.name, "sharpe_diff": bs["sharpe_diff"],
+            "sharpe_diff_ci_low": bs["ci_low"], "sharpe_diff_ci_high": bs["ci_high"], "p_bootstrap_sharpe": bs["p_one_sided"],
+            "threshold": spec.gate1_sharpe_margin, "share_ge_threshold": float(np.mean(draws >= spec.gate1_sharpe_margin)),
+            "n_boot": int(n_boot), "block_days": BOOT_BLOCK}
 
 
 def annual_returns_table(runs: dict[str, Run], taxed: bool = True) -> pd.DataFrame:

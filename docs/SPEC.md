@@ -20,7 +20,7 @@ and its reason are listed in the last section.
 | Calendar | SPY's trading days; macro series forward-filled onto it |
 | Common start | 2014-05-16 (OUNZ inception) |
 | Main window | OOS evaluation 2017-06-01 to 2024-12-31 (first execution date with a full 3-year training window) |
-| Hold-out | 2025-01-01 onward, untouched by every gate; used only by `python -m vaneck validate` |
+| Hold-out | 2025-01-01 onward, untouched by every gate; sealed, and opened only by `python -m vaneck validate --unseal` under section 19 |
 
 ## 2. Walk-forward and execution
 
@@ -328,9 +328,51 @@ depends on them, and none of them is a new hypothesis test.
 | Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of every artefact the dashboard reads. |
 | Operator state | The switches `python -m vaneck status` reads (data health gate, halt flag, retirement flags, approval signing, risk limits, monitor, last decision) as they stood when the data was exported, with the alert log and the halt history. Not a live reading. |
 | Input inventory | Every stored input series with its role, provider, span, fetch time and file hash, beside the health and cross-validation checks of section 13. |
+| Implementation shortfall | Per submitted decision of the paper book: the one-way distance to target before trading (positions from earlier fills at the signal-date close) and after it (executed weights at the execution-date close), the share of the wanted notional the participation cap let through, the explicit cost (the cost model's charge on the fills) and the delay cost (fill price against the signal-date close, signed so that a loss is positive). Read from the decision records and the book's fill history. |
+| Capacity check | The paper book's latest equity over the capacity section 16 estimates for its strategy, with the modelled drag and tracking error at the largest tested size not above the book. |
 
 A reading of the first row, for the record: the interval for equal weight
 against 60/40 VanEck is about -0.04 to +0.18. It includes zero and lies below
 the +0.20 the plan required, so on this sample the Gate 1 failure is not a
 near miss, and the lead itself is not distinguishable from zero. This is a
 description of the same data that decided Gate 1, not additional evidence.
+
+## 19. The hold-out (sealed; this protocol was written before it was opened)
+
+Section 1 sets aside everything from 2025-01-01 onward. Until 2026-11-10 the
+only rule was that nothing touches it. This section fixes what happens if it
+is opened. It was written by someone who had seen every result above and none
+of the hold-out's, and it can be amended freely until the hold-out is opened,
+not after.
+
+* **State.** The hold-out is sealed. `python -m vaneck validate` reports the
+  seal and how many trading days and rebalances wait behind it, and exits 2.
+  Counting dates reads no prices.
+* **Opening.** `python -m vaneck validate --unseal --by NAME --reason TEXT`
+  opens it. The record (`reports/holdout/unsealed.json`: who, when, why, the
+  last bar evaluated, the configuration and data hashes, the commit) is
+  written before any hold-out number is computed, so a look cannot go
+  unlogged. It opens once: a second `--unseal` is refused and only the frozen
+  tables are shown.
+* **Evaluation** (`vaneck/holdout.py`). The four baselines and the six locked
+  rules, started fresh at the first rebalance on or after the hold-out start,
+  with the main study's costs, taxes and walk-forward windows, through the
+  last bar in the data on the day it is opened. Reported: the same summary
+  table as Gate 1 and Phase 2, and the post-tax Sharpe margin of equal weight
+  over each 60/40 benchmark with the paired block-bootstrap interval of
+  section 10.
+* **Reading.** Gate 1 failed in sample, so the hold-out cannot confirm a
+  strategy and no gate is decided again. It is a consistency check on the one
+  in-sample observation worth checking: equal weight's small lead over 60/40
+  VanEck (+0.07 post-tax Sharpe, 95% interval about -0.04 to +0.18). With
+  under two years of data the hold-out interval will be wide. Three verdicts
+  are allowed and no others: "consistent" when the hold-out margin lies
+  inside the in-sample interval; "contradicts the lead" when the hold-out
+  interval lies wholly below zero; "uninformative" otherwise.
+* **Afterwards.** The tables are frozen at the last bar evaluated. Data that
+  arrives later is new out-of-sample data, and a later look at it needs its
+  own entry in this section before it is taken.
+* **What does not open it.** Data health checks and dry-run decisions on the
+  newest bar read recent prices to check the data and to form signals. None
+  of them computes the performance of a strategy or of a benchmark after
+  2024-12-31, and the dashboard draws nothing after that date.

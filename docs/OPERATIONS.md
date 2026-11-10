@@ -185,6 +185,31 @@ committed: regenerated reports alone do not count as a code change. For
 that line to read "committed", commit code and docs first, run
 `make webdash`, then commit the regenerated data.
 
+For the paper book the export adds implementation shortfall, one row per
+submitted decision (`vaneck/shortfall.py`): how far the book was from its
+targets before and after trading, which orders the participation cap
+scaled and how much of the wanted notional went out, the explicit cost of
+the fills and the delay cost, which is the move from the signal-date close
+to the fill. A negative delay cost means the one-day lag helped. Pre-trade
+weights are rebuilt from the book's fill history: decision records written
+before 2026-11-10 stored `current_weights` after the fills, so for a
+submitted decision that field holds post-trade weights in those files.
+Newer records capture it before submitting.
+
+## The hold-out
+
+`python -m vaneck validate` reports whether the 2025+ hold-out is sealed
+and exits 2 while it is. Opening it is one decision, taken once:
+
+    python -m vaneck validate --unseal --by NAME --reason "why now"
+
+That writes `reports/holdout/unsealed.json` first, then runs the
+evaluation of SPEC section 19 and freezes its tables in
+`reports/holdout/results.json`. Commit both files. Any later `validate`
+prints the frozen tables and recomputes nothing. Read section 19 before
+opening it, and change the protocol there first if you disagree with it:
+after the opening it is fixed.
+
 ## Type checking, packaging, container
 
 `make typecheck` runs mypy (CI does too); `pip install -e .` provides the

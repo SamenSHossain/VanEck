@@ -193,8 +193,9 @@ delivered, but it lifts the benchmark as much as the candidate.
 ## 8. Decision and recommendations
 
 Under the plan's rule, Gate 1 failed, so the project stops here. The 2025+
-hold-out has deliberately not been touched (`python -m vaneck validate` exists
-but was not run). If you choose to continue, the evidence points at three
+hold-out has deliberately not been touched. It is sealed: `python -m vaneck
+validate` only reports the seal, and opening it is a single logged decision
+under SPEC section 19. If you choose to continue, the evidence points at three
 structural levers rather than at signal research:
 
 1. **Tax-aware execution first.** HIFO lots, quarterly or threshold rebalancing

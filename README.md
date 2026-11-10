@@ -52,12 +52,12 @@ for the runbook.
 |---|---|
 | `python -m vaneck fetch [--force]` | refresh the raw Yahoo Finance cache in `data/raw/` (the committed cache reproduces everything offline) |
 | `python -m vaneck gate0` / `gate1` / `phase2` / `all [--force]` | run the study through that gate; without `--force` it stops at the first failed gate, as the plan prescribes |
-| `python -m vaneck validate` | the untouched 2025+ hold-out (only meaningful after a Phase 2 winner; deliberately not run) |
+| `python -m vaneck validate` | the 2025+ hold-out: reports the seal and exits 2; `--unseal --by NAME --reason TEXT` opens it once, on the record, and freezes the tables (SPEC section 19; it has not been opened) |
 | `python -m vaneck check [--json] [--cross]` | data health report; `--cross` adds FRED agreement, peer divergence and the corporate-actions audit; exit code 2 on a blocking problem |
 | `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
 | `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
 | `python -m vaneck status` / `history` / `dashboard` | latest state with a `submit:` line saying whether orders would go out (open, sell-only or blocked; exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
-| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, a frozen-results check with the hashes behind every table, the operator state with the alert and halt logs, and an inventory of every input file (`--boot N`, `--skip-golden`; SPEC section 18) |
+| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, a frozen-results check with the hashes behind every table, the operator state with the alert and halt logs, an inventory of every input file, implementation shortfall per decision and the hold-out's seal (`--boot N`, `--skip-golden`; SPEC section 18) |
 | `python -m vaneck approve <run_id> --by NAME` / `halt on|off --reason R` / `limits show|propose|approve` | approvals as code: a dry run must be approved before `--submit`; global halt; two-person risk-limit changes |
 | `python -m vaneck broker check` / `reconcile [--adopt]` / `rebalance --broker alpaca --submit` | venue connectivity, shadow-vs-venue reconciliation, execution at Alpaca with the local book as shadow ledger |
 | `python -m vaneck expectations --strategy S` / `retire show|clear` | freeze retirement expectation bands (SPEC s.17); inspect or clear a retirement flag |
@@ -121,6 +121,8 @@ vaneck/
   retire.py      expectation bands and pre-registered retirement rules R1-R5, flags
   live.py        idempotent decision pipeline (health, targets, orders, risk, approvals, record), replay, work
   monitor.py     paper-vs-research reconciliation, implementability gap, retirement evaluation, alerts
+  shortfall.py   implementation shortfall per decision: distance to target, capped orders, explicit and delay cost
+  holdout.py     the sealed 2025+ hold-out: status, one-time logged opening, frozen results
   cli.py         python -m vaneck ...
 tests/           92 tests across all layers incl. hypothesis property tests, a leak canary, goldens and a fake venue
 data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes

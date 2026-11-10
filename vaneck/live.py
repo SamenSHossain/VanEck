@@ -191,6 +191,8 @@ def rebalance(md: MarketData, strategy: str, broker: PaperBroker, decisions_dir:
         status = "submitted"
         approval_note = approved_why
 
+    # the book as the decision found it; captured here because submitting changes it
+    current = {k: round(v, 6) for k, v in broker.weights(split.signal_date).items()}
     fills, executed = [], None
     if status == "submitted":
         fills = [f.__dict__ for f in broker.submit(risk.orders, split.exec_date, run_id=run_id)]
@@ -202,7 +204,7 @@ def rebalance(md: MarketData, strategy: str, broker: PaperBroker, decisions_dir:
         "kind": kind or "rebalance", "parent_run_id": parent_run_id, "decision_hash": d_hash, "approval": approval_note,
         "signal_date": str(split.signal_date.date()), "exec_date": str(split.exec_date.date()),
         "regime": regime, "equity": equity, "cash": cash, "policy": None if policy is None else policy.name,
-        "current_weights": {k: round(v, 6) for k, v in broker.weights(split.signal_date).items()},
+        "current_weights": current,
         "targets": {k: round(v, 6) for k, v in targets.items() if v > 0},
         "executed_weights": executed,
         "health": health.to_dict(), "risk": risk.to_dict(), "fills": fills, "notes": notes,

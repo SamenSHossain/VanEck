@@ -32,8 +32,11 @@ def monthly_test(nav_x: pd.Series, nav_y: pd.Series) -> dict:
     return paired_onesided_t(monthly_returns(nav_x), monthly_returns(nav_y))
 
 
+BOOT_BLOCK = 21  # trading days per block in the paired bootstrap of Sharpe differences (SPEC section 10)
+
+
 def bootstrap_sharpe_diff(nav_x: pd.Series, nav_y: pd.Series, rf: pd.Series, n_boot: int = 2000,
-                          block: int = 21, seed: int = 0, return_draws: bool = False) -> dict:
+                          block: int = BOOT_BLOCK, seed: int = 0, return_draws: bool = False) -> dict:
     """Paired moving-block bootstrap of the annualized Sharpe difference (one-sided p).
 
     ``return_draws`` adds the resampled differences under ``draws``, for a caller that needs another

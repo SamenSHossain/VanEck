@@ -257,19 +257,35 @@ def cmd_all(args, phases=("gate0", "gate1", "phase2")):
 
 
 def cmd_validate(args):
-    """Hold-out evaluation (2025+). Only meaningful if Phase 2 produced winners."""
-    spec = SPEC
-    outdir = Path(args.out) / "holdout"
-    outdir.mkdir(parents=True, exist_ok=True)
-    md = data.build_market_data(spec)
-    splits = study.make_splits(md, spec, start=spec.fund_start, end=md.index[-1])
-    splits = [s for s in splits if s.exec_date >= pd.Timestamp(spec.holdout_start)]
-    end = md.index[-1]
-    base = study.run_baselines(md, splits, spec, end=end)
-    strat = study.run_strategies(md, splits, spec, end=end, overlay=True)
-    tbl = pd.concat([study.summary_table(base), study.summary_table(strat)])
-    _save(tbl, "holdout_summary", outdir)
+    """The 2025+ hold-out: sealed until `--unseal --by NAME --reason TEXT` opens it once (SPEC section 19)."""
+    from . import holdout
+    folder = Path(args.out) / "holdout"
+    md = data.build_market_data(SPEC)
+    st = holdout.status(md, SPEC, folder)
+    if st["state"] == "sealed" and not args.unseal:
+        print(f"hold-out: SEALED. {st['trading_days']} trading days and {st['rebalances']} rebalances wait from {st['start']} "
+              f"to {st['data_through']}.")
+        print("It can be opened once. `python -m vaneck validate --unseal --by NAME --reason TEXT` records who opened it")
+        print("and why, runs the evaluation of SPEC section 19 and freezes the tables. Nothing was evaluated.")
+        return 2
+    if st["state"] == "sealed":
+        try:
+            results = holdout.unseal(md, args.by, args.reason, SPEC, folder, n_boot=args.boot)["results"]
+        except ValueError as exc:
+            print(f"refused: {exc}")
+            return 2
+        st = holdout.status(md, SPEC, folder)
+    else:
+        if args.unseal:
+            print("the hold-out is already open; showing the frozen results, nothing was recomputed")
+        results = holdout.complete(md, SPEC, folder)
+    print(f"hold-out: OPENED by {st['opened_by']} at {st['opened_utc']} ({st['reason']}); "
+          f"evaluated through {st['evaluated_through']}")
+    tbl = pd.DataFrame(results["summary"]).set_index("name")
     print(tbl[["cagr_post", "sharpe_pre", "sharpe_post", "mdd_post", "turnover_pre"]].to_string())
+    for m in results["margins"]:
+        print(f"equal weight minus {m['benchmark']}: {m['sharpe_diff']:+.3f} post-tax Sharpe, "
+              f"95% interval {m['sharpe_diff_ci_low']:+.3f} to {m['sharpe_diff_ci_high']:+.3f}")
     return 0
 
 
@@ -673,8 +689,12 @@ def main(argv=None) -> int:
         s.add_argument("--boot", type=int, default=2000, help="bootstrap draws for the supplementary Sharpe test")
         s.add_argument("--out", default=str(REPORT_DIR))
         s.set_defaults(func=lambda a, ph=phases: cmd_all(a, ph))
-    v = sub.add_parser("validate", help="evaluate on the untouched 2025+ hold-out")
+    v = sub.add_parser("validate", help="the 2025+ hold-out: shows the seal; --unseal opens it once, logged (exit 2 if sealed)")
     v.add_argument("--out", default=str(REPORT_DIR))
+    v.add_argument("--unseal", action="store_true", help="open the hold-out: a one-time decision, recorded with --by, --reason")
+    v.add_argument("--by", default=None, help="who opens it")
+    v.add_argument("--reason", default=None, help="why it is opened now")
+    v.add_argument("--boot", type=int, default=2000, help="bootstrap draws for the margin interval")
     f.set_defaults(func=cmd_fetch)
     v.set_defaults(func=cmd_validate)
 

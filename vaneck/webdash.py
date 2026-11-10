@@ -1,7 +1,6 @@
 """Collect everything the interactive dashboard shows into one JSON document."""
 from __future__ import annotations
 
-import inspect
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -10,18 +9,16 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from . import audit, design, metrics, retire, study
+from . import audit, design, holdout, metrics, retire, shortfall, study
 from .calendar import Split
 from .config import AUX_TICKERS, MACRO_TICKERS, RAW_DIR, REPORT_DIR, ROOT, SPEC, SUBSTITUTES, UNIVERSE, Spec
 from .data import MarketData
 from .regimes import episodes, regime_at
-from .stats import bootstrap_sharpe_diff
 from .universe import run_gate0
 
 TABLES = REPORT_DIR / "tables"
 EDGE_WINDOW = metrics.TRADING_DAYS   # trading days in the rolling 12-month edge
-BOOT_BLOCK = int(inspect.signature(bootstrap_sharpe_diff).parameters["block"].default)   # the block every interval here uses
-CLASSIC_BENCHMARK = "60/40 Classic (SPY/BND)"
+CLASSIC_BENCHMARK = study.CLASSIC_BENCHMARK
 _CODE_STATE = {True: "uncommitted code changes", False: "committed"}
 
 
@@ -158,20 +155,6 @@ def _json(path: Path):
     return json.loads(path.read_text()) if path.exists() else None
 
 
-def margin_interval(run: study.Run, bench: study.Run, spec: Spec = SPEC, n_boot: int = 2000) -> dict:
-    """Bootstrap interval of a portfolio's post-tax Sharpe margin over a benchmark, the statistic Gate 1 decides on.
-
-    Columns are named as in ``study.phase2_tests`` so both can be drawn on one axis. ``share_ge_threshold`` is the
-    share of resamples whose margin reaches the Gate 1 requirement.
-    """
-    bs = bootstrap_sharpe_diff(run.post.nav, bench.post.nav, run.post.rf, n_boot=n_boot, return_draws=True)
-    draws = bs["draws"]
-    return {"portfolio": run.name, "benchmark": bench.name, "sharpe_diff": bs["sharpe_diff"],
-            "sharpe_diff_ci_low": bs["ci_low"], "sharpe_diff_ci_high": bs["ci_high"], "p_bootstrap_sharpe": bs["p_one_sided"],
-            "threshold": spec.gate1_sharpe_margin, "share_ge_threshold": float(np.mean(draws >= spec.gate1_sharpe_margin)),
-            "n_boot": int(n_boot), "block_days": BOOT_BLOCK}
-
-
 def rolling_edge(runs: dict[str, study.Run], bench: study.Run, window: int = EDGE_WINDOW) -> list[dict]:
     """Month-end samples of each run's trailing ``window``-day post-tax return and Sharpe ratio minus the benchmark's."""
     def trailing(sim) -> tuple[pd.Series, pd.Series]:
@@ -294,7 +277,8 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
     tests_diag = study.phase2_tests(diag, bench, spec, taxed=True, n_boot=n_boot)
     annual = study.annual_returns_table(runs)
     ew = base["EqualWeight"]
-    margins = [margin_interval(ew, base[b], spec, n_boot) for b in (study.PRIMARY_BENCHMARK, CLASSIC_BENCHMARK) if b in base]
+    benchmarks = [b for b in (study.PRIMARY_BENCHMARK, CLASSIC_BENCHMARK) if b in base]
+    margins = [study.margin_interval(ew, base[b], spec, n_boot) for b in benchmarks]
     edge = rolling_edge({"EqualWeight": ew, **strat}, bench)
     weights = weight_paths(md, splits, {**strat, **diag}, spec)
     golden = golden_check(md, spec, base, strat, diag) if check_golden else None
@@ -313,6 +297,8 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
             "health": d["health"]["status"], "risk": d["risk"]["status"],
             "flags": [c["name"] for c in d["risk"]["checks"] if c["status"] != "pass"], "notes": d.get("notes", []),
         })
+    paper = [json.loads(q.read_text()) for q in sorted((ROOT / "paper" / "decisions").glob("*.json"))]
+    slippage = shortfall.table(paper, (book or {}).get("fills"), md.close) if paper else []
     manifest = audit.run_manifest("webdash", spec)
     annual_json = {c: [None if pd.isna(v) else round(float(v), 4) for v in annual[c]] for c in annual.columns}
     book_json = None
@@ -360,9 +346,11 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
                        "monitor": _json(REPORT_DIR / "monitor_EqualWeight.json"), "health": _json(REPORT_DIR / "health.json"),
                        "expectations": _json(ROOT / "paper" / "expectations_EqualWeight.json"), "timeline": _store_timeline(),
                        "state": operator_state(), "data_files": data_inventory(),
+                       "shortfall": slippage, "risk_checks": shortfall.risk_checks(paper),
                        "crossval": {k: _csv(f"crossval_{k}") for k in ("macro", "peers", "corporate_actions")}},
         "tests": _junit(junit),
         "golden": golden,
+        "holdout": {"status": holdout.status(md, spec), "results": holdout.stored()},
         "provenance": provenance(manifest, golden),
     }
 
@@ -418,6 +406,10 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     study_rows += _rows("rolling_edge", g1.get("rolling_edge"))
     keep = ("variant", "name", "sharpe_pre", "sharpe_post", "cagr_post", "mdd_post", "turnover_pre", "tax_pct_yr")
     study_rows += _rows("sensitivities", [{k: r.get(k) for k in keep} for r in g1.get("sensitivities") or []])
+    sealed = payload.get("holdout") or {}
+    study_rows += _kv("holdout", sealed.get("status"))
+    study_rows += _rows("holdout_summary", (sealed.get("results") or {}).get("summary"))
+    study_rows += _rows("holdout_margin", (sealed.get("results") or {}).get("margins"))
     study_rows += _rows("phase2_summary", p2["summary"])
     study_rows += _rows("phase2_tests", [{"family": "primary", **x} for x in p2["tests_post"]]
                         + [{"family": "diagnostic", **x} for x in p2["tests_diag"]])
@@ -461,7 +453,8 @@ def tables(payload: dict) -> dict[str, list[dict]]:
                                  **{f"realized_{k}": v for k, v in (b.get("realized_by_year") or {}).items()}})
     op_rows += _rows("decisions", [{**_drop([d], "flags", "notes", "health", "risk")[0], "flags": ", ".join(d["flags"]) or "none",
                                     "notes": " | ".join(d["notes"])} for d in op["decisions"]])
-    op_rows += _kv("monitor", {"status": mon.get("status"), "as_of": mon.get("as_of"), **(mon.get("realized") or {})})
+    op_rows += _kv("monitor", {"status": mon.get("status"), "as_of": mon.get("as_of"), "strategy": mon.get("strategy"),
+                               **(mon.get("realized") or {})})
     op_rows += _kv("reconciliation", mon.get("reconciliation"))
     op_rows += [{"table": "alerts", "i": i, "text": a} for i, a in enumerate(mon.get("alerts") or [])]
     op_rows += _rows("retirement", (mon.get("retirement") or {}).get("rules"))
@@ -479,6 +472,8 @@ def tables(payload: dict) -> dict[str, list[dict]]:
     op_rows += _rows("alert_log", [{"i": i, **r} for i, r in enumerate(state.get("alert_log") or [])])
     op_rows += _rows("halt_log", [{"i": i, **r} for i, r in enumerate(state.get("halt_log") or [])])
     op_rows += _rows("data_files", op.get("data_files"))
+    op_rows += _rows("shortfall", op.get("shortfall"))
+    op_rows += _rows("risk_checks", op.get("risk_checks"))
     op_rows += _kv("expectations", {k: v for k, v in (op["expectations"] or {}).items() if k != "window"})
 
     ts = payload["tests"]

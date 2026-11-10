@@ -88,5 +88,13 @@ def test_exported_tables_carry_what_the_dashboard_reads(synth, tmp_path):
     files = table("operations", "data_files")
     assert {"series", "role", "provider", "status", "first", "last", "rows", "sha256", "in_data_hash"} <= set(files[0])
     assert sum(f["role"] == "universe fund" for f in files) == 9 and all(f["sha256"] for f in files if f["in_data_hash"] == "yes")
+    sealed = {r["key"]: r["value"] for r in table("study_tables", "holdout")}
+    assert sealed["state"] in ("sealed", "opened") and sealed["start"] == spec.holdout_start
+    if sealed["state"] == "sealed":
+        assert not table("study_tables", "holdout_summary") and not table("study_tables", "holdout_margin")
+    slip = table("operations", "shortfall")
+    wanted = {"signal_date", "gap_before", "gap_after", "scaled", "ordered_share", "explicit_bps", "delay_bps"}
+    assert slip and wanted <= set(slip[0])
+    assert {"check", "decisions", "passed", "warned", "blocked", "limit"} <= set(table("operations", "risk_checks")[0])
     meta = {r["key"]: r["value"] for r in table("study_tables", "meta")}
     assert meta["code_state"] in ("committed", "uncommitted code changes", "unknown")
