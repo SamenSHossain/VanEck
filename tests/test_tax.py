@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from vaneck.config import SPEC, Spec
-from vaneck.tax import TaxLedger
+from vaneck.tax import Lot, TaxLedger, select_lots
 
 T = pd.Timestamp
 
@@ -83,3 +83,38 @@ def test_untaxed_ledger_has_no_liability():
     led.distribution("X", T("2020-03-31"), 50.0)
     assert led.accrued_liability() == 0.0
     assert led.settle(T("2021-01-04")) == 0.0
+
+
+def test_lots_bought_at_the_same_price_are_relieved_oldest_first():
+    """Per-unit gains that differ only in their last bits are a tie; rounding must not decide the order.
+
+    The study has such a pair: HAP bought on 2021-08-02 and on 2021-12-01 at the same adjusted price. Which
+    lot went first on 2022-02-01 depended on the CPU's arithmetic kernels and changed later tax years.
+    """
+    now, cost = T("2022-02-01"), 40.66001116735793
+    for nudge in (-1.0, 0.0, 1.0):
+        older = Lot(T("2021-08-02"), 6862.559345786264, 6862.559345786264 * cost * (1.0 + nudge * 4e-16))
+        newer = Lot(T("2021-12-01"), 34187.683185089765, 34187.683185089765 * cost)
+        for method in ("TAXOPT", "HIFO"):
+            assert select_lots([older, newer], 5000.0, method, 44.066906, now) == [(0, 5000.0)], (method, nudge)
+        # the same holds when both lots sit at a loss
+        assert select_lots([older, newer], 5000.0, "TAXOPT", 38.0, now) == [(0, 5000.0)], nudge
+    # a real price difference still decides
+    cheap, dear = Lot(T("2021-08-02"), 100.0, 4000.0), Lot(T("2021-12-01"), 100.0, 4100.0)
+    assert select_lots([cheap, dear], 50.0, "TAXOPT", 44.0, now) == [(1, 50.0)]      # smaller gain first
+    assert select_lots([cheap, dear], 50.0, "HIFO", 44.0, now) == [(1, 50.0)]        # higher cost first
+    assert select_lots([cheap, dear], 50.0, "TAXOPT", 39.0, now) == [(1, 50.0)]      # bigger loss first
+    assert select_lots([cheap, dear], 50.0, "FIFO", 44.0, now) == [(0, 50.0)]
+
+
+def test_a_sale_that_leaves_rounding_residue_closes_the_lot():
+    """Dollars divided by price can come back a hair short of the units held; the lot must not survive as dust."""
+    led = TaxLedger(SPEC, taxed=True)
+    led.buy("X", T("2023-01-03"), 73327.79709048141, 1778127.36)
+    gain = led.sell("X", T("2023-06-01"), 73327.79709048141 - 3e-11, 1700000.0)
+    assert led.lots["X"] == [] and led.units("X") == 0.0 and led.basis("X") == 0.0
+    assert gain == pytest.approx(1700000.0 - 1778127.36)
+    # a real remainder is kept
+    led.buy("Y", T("2023-01-03"), 100.0, 1000.0)
+    led.sell("Y", T("2023-06-01"), 99.5, 995.0)
+    assert led.units("Y") == pytest.approx(0.5)

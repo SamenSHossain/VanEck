@@ -14,7 +14,9 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from .config import SPEC, SUBSTITUTES
-from .tax import Lot, select_lots
+from .tax import DUST_UNITS, Lot, select_lots
+
+DUST_DOLLARS = 1e-4     # a trade below a hundredth of a cent is rounding residue; 1e-9 was the size of the residue itself
 
 
 @dataclass(frozen=True)
@@ -193,7 +195,7 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
             if wt * (1 - policy.band) <= w <= wt * (1 + policy.band):
                 continue
         delta = tgt - cur
-        if abs(delta) < 1e-9:
+        if abs(delta) < DUST_DOLLARS:
             continue
         if delta > 0:
             v = vehicle_for_buy(members)
@@ -206,7 +208,7 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
                 take = min(need, value[m])
                 add_sell(m, take, "rebalance")
                 need -= take
-                if need <= 1e-9:
+                if need < DUST_DOLLARS:
                     break
 
     # ---- stage 3: cash deployment (band mode) --------------------------------- #
@@ -215,7 +217,7 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
         projected = cash + sum(sells.values()) - sum(buys.values())
         floor = max(policy.cash_deploy_threshold * equity, target_cash)
         excess = projected - floor
-        if excess > 1e-6:
+        if excess > DUST_DOLLARS:
             short = []
             for x, members in members_of.items():
                 tgt = float(targets.get(x, 0.0)) * equity
@@ -223,7 +225,7 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
                 if tgt > cur:
                     short.append((x, members, tgt - cur))
             for x, members, gap in sorted(short, key=lambda r: -r[2] / max(float(targets.get(r[0], 0.0)) * equity, 1e-9)):
-                if excess <= 1e-6:
+                if excess <= DUST_DOLLARS:
                     break
                 v = vehicle_for_buy(members)
                 if v is None:
@@ -244,7 +246,7 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
     trades: list[Trade] = []
     for t in sorted(set(buys) | set(sells)):
         net = buys.get(t, 0.0) - sells.get(t, 0.0)
-        if abs(net) < 1e-9:
+        if abs(net) < DUST_DOLLARS:
             continue
         tr = Trade(ticker=t, dollars=net, reason=reasons.get(t, "rebalance"), requested=net)
         if policy.max_participation is not None and adv is not None:
@@ -257,15 +259,15 @@ def plan(date: pd.Timestamp, targets: pd.Series, holdings: dict[str, HoldingView
             units_to_sell = -tr.dollars / prices[t]
             planned = lot_plans.get(t, [])
             planned_units = sum(u for _, u in planned)
-            if planned_units > units_to_sell + 1e-12:         # cap truncated a harvest sale
+            if planned_units > units_to_sell + DUST_UNITS:    # cap truncated a harvest sale
                 plan_, rem = [], units_to_sell
                 for i, u in planned:
                     take = min(u, rem)
-                    if take > 1e-12:
+                    if take >= DUST_UNITS:
                         plan_.append((i, take))
                     rem -= take
                 planned = plan_
-            elif units_to_sell - planned_units > 1e-12 and h is not None:
+            elif units_to_sell - planned_units > DUST_UNITS and h is not None:
                 used = {i for i, _ in planned}
                 rest = [Lot(d, u, b) for i, u, b, d in h.lots if i not in used]
                 rest_idx = [i for i, _, _, _ in h.lots if i not in used]

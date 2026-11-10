@@ -24,12 +24,32 @@ import pandas as pd
 
 from .config import SPEC, Spec
 
+# Tolerances that separate real amounts from floating-point residue. Both sit several orders of magnitude above
+# the residue (about 1e-11 units on a position of 1e5 units) and far below anything a decision could mean.
+DUST_UNITS = 1e-6      # a lot or a holding smaller than a millionth of a share is residue, not a position
+TIE_TOL = 1e-9         # dollars per unit: per-unit gains closer than this come from the same price
+
 
 @dataclass
 class Lot:
     date: pd.Timestamp
     units: float
     basis: float  # dollars for the whole lot
+
+
+def _level(values: list[float], tol: float = TIE_TOL) -> list[float]:
+    """Give values within ``tol`` of a neighbour one common value, so that rounding cannot order them.
+
+    Two lots bought at the same price have the same per-unit cost only up to the last bits of
+    ``basis / units``. Compared raw, their relief order would depend on the machine doing the arithmetic.
+    """
+    out = list(values)
+    order = sorted(range(len(values)), key=values.__getitem__)
+    for k, i in enumerate(order):
+        prev = order[k - 1]
+        if k and values[i] - values[prev] <= tol:
+            out[i] = out[prev]                       # within tol of the neighbour below: same level
+    return out
 
 
 @dataclass
@@ -56,24 +76,26 @@ def select_lots(lots: list[Lot], units: float, method: str, price: float, now: p
         return []
     idx = list(range(len(lots)))
     m = method.upper()
+    # equal keys always go to the older lot (then the earlier index): the order never rests on rounding
     if m == "FIFO":
-        order = sorted(idx, key=lambda i: lots[i].date)
+        order = sorted(idx, key=lambda i: (lots[i].date, i))
     elif m == "HIFO":
-        order = sorted(idx, key=lambda i: -lots[i].basis / lots[i].units)
+        cost = _level([lot.basis / lot.units for lot in lots])
+        order = sorted(idx, key=lambda i: (-cost[i], lots[i].date, i))
     elif m == "TAXOPT":
+        gain = _level([price - lot.basis / lot.units for lot in lots])
+
         def key(i):
-            lot = lots[i]
-            gain_pu = price - lot.basis / lot.units
-            lt = (now - lot.date).days > long_term_days
-            if gain_pu < 0:
-                return (0, gain_pu)            # biggest loss first
-            return (1 if lt else 2, gain_pu)   # long-term gains before short-term, smallest first
+            lt = (now - lots[i].date).days > long_term_days
+            if gain[i] < -TIE_TOL:
+                return (0, gain[i], lots[i].date, i)             # biggest loss first
+            return (1 if lt else 2, gain[i], lots[i].date, i)    # long-term gains before short-term, smallest first
         order = sorted(idx, key=key)
     else:
         raise ValueError(f"unknown lot method {method}")
     plan, remaining = [], units
     for i in order:
-        if remaining <= 1e-12:
+        if remaining < DUST_UNITS:
             break
         take = min(lots[i].units, remaining)
         plan.append((i, take))
@@ -184,6 +206,8 @@ class TaxLedger:
         for i, take in lot_plan:
             lot = lots[i]
             take = min(take, lot.units)
+            if lot.units - take < DUST_UNITS:        # what would be left is rounding residue: the lot is closed
+                take = lot.units
             frac = take / lot.units
             basis_part = lot.basis * frac
             lot_gain = take * price - basis_part

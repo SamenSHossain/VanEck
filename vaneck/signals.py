@@ -29,6 +29,18 @@ def _prices(win: MarketData, tickers, lookback: int) -> pd.DataFrame:
     return px
 
 
+def top_n(scores: pd.Series, n: int) -> list[str]:
+    """The ``n`` funds with the highest scores; equal scores go to the fund listed first.
+
+    Drift scores are counts of up-days out of 60, so ties at the cut are common (26 of the 91 rebalances
+    of the study). A library sort leaves the order of equal keys to whichever algorithm it picks for the
+    CPU it runs on, which made the selection machine-dependent. This order is explicit (SPEC section 8).
+    """
+    values = [float(v) if v == v else -np.inf for v in scores.to_numpy(dtype=float)]     # missing scores rank last
+    order = sorted(range(len(values)), key=lambda i: (-values[i], i))
+    return [scores.index[i] for i in order[:n]]
+
+
 def momentum_scores(win: MarketData, tickers, spec: Spec = SPEC) -> pd.Series:
     px = _prices(win, tickers, spec.signal_lookback)
     return (px.iloc[-1] / px.iloc[-1 - spec.signal_lookback] - 1.0).rename("momentum_60d")
@@ -46,7 +58,7 @@ def signal_none(win: MarketData, tickers, spec: Spec = SPEC) -> SignalOutput:
 
 def signal_momentum(win: MarketData, tickers, spec: Spec = SPEC) -> SignalOutput:
     s = momentum_scores(win, tickers, spec)
-    top = list(s.sort_values(ascending=False).index[: spec.top_n])
+    top = top_n(s, spec.top_n)
     pinned = {t: spec.w_max for t in top}
     bounds = {t: (spec.w_min, spec.other_cap) for t in tickers if t not in pinned}
     return SignalOutput(pinned=pinned, bounds=bounds, scores=s)
@@ -54,7 +66,7 @@ def signal_momentum(win: MarketData, tickers, spec: Spec = SPEC) -> SignalOutput
 
 def signal_drift(win: MarketData, tickers, spec: Spec = SPEC) -> SignalOutput:
     s = drift_scores(win, tickers, spec)
-    top = s.sort_values(ascending=False).index[: spec.top_n]
+    top = top_n(s, spec.top_n)
     pinned = {}
     for t in top:
         level = float(np.clip((s[t] - 0.5) / 0.5, 0.0, 1.0))

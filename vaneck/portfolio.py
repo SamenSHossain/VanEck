@@ -19,7 +19,7 @@ from .config import CASH, SPEC, Spec
 from .costs import CostModel
 from .data import MarketData
 from .execution import ExecutionPolicy, HoldingView, plan
-from .tax import TaxLedger
+from .tax import DUST_UNITS, TaxLedger
 
 WeightFn = Callable[[MarketData, Split], "pd.Series | dict[str, float]"]
 
@@ -156,6 +156,8 @@ def simulate(md: MarketData, targets: pd.DataFrame, spec: Spec = SPEC, taxed: bo
                     u = min(-tr.dollars / p_, units[j])
                     if u <= 0:
                         continue
+                    if units[j] - u < DUST_UNITS:        # what would be left is rounding residue: sell it all
+                        u = units[j]
                     proceeds = u * p_
                     ledger.sell(tr.ticker, d, u, proceeds, lot_plan=tr.lot_plan)
                     units[j] -= u
@@ -173,7 +175,7 @@ def simulate(md: MarketData, targets: pd.DataFrame, spec: Spec = SPEC, taxed: bo
                 row[j] += notional
                 n_harv += tr.reason == "harvest" and tr.dollars < 0
                 n_cap += tr.capped
-            units[np.abs(units) < 1e-12] = 0.0
+            units[np.abs(units) < DUST_UNITS] = 0.0
             trades[d] = row
             costs[d] = total_cost
             harvests[d] = n_harv

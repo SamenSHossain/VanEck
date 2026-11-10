@@ -177,3 +177,29 @@ def test_harvesting_never_rebuys_inside_the_window_on_random_paths():
         res = portfolio.simulate(md, targets, taxed=taxed, policy=pol)
         assert res.harvests.sum() >= 10                              # the policy is active on these paths
         assert not [e for e in res.ledger.log if e["event"] == "wash_after"]
+
+
+def test_a_complete_harvest_leaves_no_residue_in_the_simulator():
+    """Found by search: on this path the dollars of the sale, divided by the price, come back a hair short of the
+    units held. The simulator kept 1e-16 of the account in X, with no tax lot behind it."""
+    dates = pd.to_datetime(["2023-02-01", "2023-03-01", "2023-05-01", "2023-07-03", "2023-09-01"])
+    p = 66.328834
+    path = [p, round(p * 1.03, 6), round(p * 1.01, 6), round(p * 0.99, 6), round(p * 0.86, 6)]   # ends 14% down
+    idx = pd.bdate_range("2023-01-02", "2023-12-29")
+    px = pd.DataFrame({"X": float("nan"), "S": 118.81301, "Y": 10.0}, index=idx)
+    for d, level in zip(dates, path):
+        px.loc[d:, "X"] = level
+    px = px.bfill()
+    zeros = pd.DataFrame(0.0, index=idx, columns=px.columns)
+    macro = pd.DataFrame({"spx": 1.0, "vix": 1.0, "tnx": 1.0, "irx": 0.0, "crb": 1.0}, index=idx)
+    md = MarketData(adj_close=px, close=px.copy(), volume=zeros + 1e7, distributions=zeros, macro=macro, splits=zeros.copy())
+    wx = [0.3732, 0.6852, 0.6204, 0.4925, 0.6254]
+    targets = pd.DataFrame({"X": wx, "Y": [round(1 - w, 4) for w in wx]}, index=dates)
+    spec = Spec(cash_yield_mode="fixed", cash_yield_fixed=0.0)
+    pol = ExecutionPolicy(harvest=True, substitutes=(("X", "S"),))
+    res = portfolio.simulate(md, targets, spec=spec, cost_model=ZeroCost(spec, override_file=None), initial=1_000_000.0,
+                             policy=pol)
+    last = dates[-1]
+    assert res.harvests.loc[last] == 1
+    assert res.weights.loc[last, "X"] == 0.0 and res.ledger.lots["X"] == []
+    assert res.weights.loc[last, "S"] == pytest.approx(wx[-1])

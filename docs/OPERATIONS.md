@@ -141,6 +141,24 @@ if the numbers moved while the hashes did not. After a deliberate change, run
 `python -m vaneck golden --update`, read the diff, and commit it: results can
 only change together with a visible change in inputs or code.
 
+The frozen numbers must not depend on the machine. A CI runner with different
+CPU features once failed this check on a commit that passed elsewhere (SPEC
+section 20). To repeat the check locally, recompute under other arithmetic
+kernels; the feature names are the ones `numpy.show_runtime()` lists as found:
+
+```bash
+NPY_DISABLE_CPU_FEATURES="X86_V4 AVX512_ICL AVX512_SPR" OPENBLAS_CORETYPE=Haswell python -m vaneck golden
+```
+
+```bash
+NPY_DISABLE_CPU_FEATURES="X86_V3 X86_V4 AVX512_ICL AVX512_SPR" OPENBLAS_CORETYPE=Nehalem python -m vaneck golden
+```
+
+Both must print `golden check: OK`. Agreement is within 4e-7 relative, set by
+the MaxSharpe optimizer's stopping tolerance; the check allows 1e-6. A
+mismatch that appears only under another kernel means a decision is resting on
+rounding or on the order of equal keys, and should be given an explicit rule.
+
 ## History, status, alerts, dashboard
 
 Every `check`, `rebalance`, `replay`, `monitor`, `all` and `extensions` run is

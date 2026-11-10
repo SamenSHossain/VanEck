@@ -111,6 +111,7 @@ without saying how a signal and an optimizer interact. Locked rule:
   * None: nothing pinned; every fund bounded [5%, 20%].
   * Momentum: top 3 by 60-day return pinned at 20% each; others bounded [5%, 10%].
   * Drift: top 3 by share of up-days pinned at 15% + 5% x clip((drift - 0.5)/0.5, 0, 1); others bounded [5%, 10%].
+  * Ties in a ranking go to the fund listed first in section 1. (Stated on 2026-11-10; see section 20.)
 * An **optimizer** allocates the residual budget to the non-pinned funds inside their bounds, using the covariance of daily returns over the 3-year training window:
   * MinVar: minimise total portfolio variance (pinned positions included).
   * MaxSharpe: maximise (mu'w)/sqrt(w'Sw) with mu = annualised 60-day trailing return minus the cash yield. If no feasible portfolio has positive expected excess return the optimizer falls back to MinVar.
@@ -214,7 +215,9 @@ Rules (all fixed now):
   lots with an unrealized loss (largest loss per unit first), then long-term
   gain lots (smallest gain per unit first), then short-term gain lots (smallest
   gain per unit first). Long term = held more than 365 days. Under the single
-  37% rate this is HIFO with a long-term preference.
+  37% rate this is HIFO with a long-term preference. Lots whose gain per unit
+  differs by less than 1e-9 dollars count as equal and are relieved oldest
+  first. (Stated on 2026-11-10; see section 20.)
 * **Drift band.** A position (or its exposure group, see harvesting) is traded
   only when its weight is outside target x (1 +/- 0.20); it is then traded back
   to target. If buys exceed the cash raised by sells plus existing cash, buys
@@ -404,3 +407,51 @@ not after.
   newest bar read recent prices to check the data and to form signals. None
   of them computes the performance of a strategy or of a benchmark after
   2024-12-31, and the dashboard draws nothing after that date.
+
+## 20. Corrections and clarifications of 2026-11-10 (after the results were known)
+
+The frozen results did not reproduce on every machine: the same commit passed
+the golden test on one CI runner and failed it on another. Four causes were
+found. Each was a decision that the rules above did not state and the code
+left to floating-point rounding or to a library's choice of algorithm. Each is
+now an explicit rule. No pre-registered threshold was changed.
+
+1. **The no-rebuy window** was dropped for a fund that had been sold out
+   completely. This is the one real defect; see the correction note in
+   section 14.
+2. **Ties in a signal's ranking.** A drift score is a count of up-days out of
+   60, so equal scores are common: in 26 of the 91 rebalances the top-3 cut
+   fell inside a tie. The ranking used a library sort that does not define the
+   order of equal keys and chooses its algorithm by CPU. Rule: equal scores go
+   to the fund listed first in section 1. Against the machine that produced
+   the first results, the favoured set changes in 2 of the 91 rebalances
+   (2020-10-30 and 2021-12-31: ANGL instead of PFXF, both at the same score).
+3. **Ties between tax lots.** Two lots bought at the same price have the same
+   gain per unit, up to rounding in `basis / units`. Which was relieved first
+   under TAXOPT or HIFO rested on the last bits (the HAP lots of 2021-08-02
+   and 2021-12-01, first decided on 2022-02-01), and changed the character of
+   later gains. Rule: gains per unit within 1e-9 dollars are equal, and equal
+   lots are relieved oldest first. No frozen value moved on the original
+   machine.
+4. **Rounding residue.** A sale that would leave less than 1e-6 units closes
+   the lot and the position, and trades below 1e-4 dollars are not generated.
+   The thresholds used before (1e-12 units, 1e-9 dollars) were the size of the
+   residue itself for a portfolio of this size. No frozen value moved.
+
+Effect of rule 2, the only one that moves results on the original machine.
+Everything else in the study is unchanged, including every gate, test outcome
+and verdict:
+
+| Post-tax Sharpe | Before | After |
+|---|---|---|
+| DriftxMinVar+Regime | 0.2365 | 0.2370 |
+| DriftxMaxSharpe+Regime | 0.2250 | 0.2247 |
+| DriftxMinVar (no overlay) | 0.3728 | 0.3738 |
+| DriftxMaxSharpe (no overlay) | 0.3741 | 0.3745 |
+
+Check made after the change: the 248 frozen values were recomputed under
+AVX-512, AVX2 and SSE-only arithmetic kernels, three BLAS kernels,
+single-threaded BLAS, and two environments (Python 3.11 with numpy 2.4, Python
+3.13 with numpy 2.5). All agree within 4e-7 relative. The largest spread is on
+the MaxSharpe strategies and comes from the optimizer's stopping tolerance;
+the golden test allows 1e-6. `docs/OPERATIONS.md` gives the command.
