@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import pandas as pd
 
@@ -29,7 +30,7 @@ def rebalance_schedule(index: pd.DatetimeIndex, start, end, lag: int = SPEC.exec
     firsts = month_first_trading_days(index)
     pos = index.get_indexer(firsts)
     rows = []
-    for p in pos:
+    for p in map(int, pos):
         if p - lag < 0:
             continue
         exec_date = index[p]
@@ -71,7 +72,8 @@ def walk_forward_splits(index: pd.DatetimeIndex, data_start, end, spec: Spec = S
     start = first_valid_exec_date(index, data_start, spec)
     sched = rebalance_schedule(index, start, end, spec.exec_lag_days)
     out = []
-    for exec_date, row in sched.iterrows():
+    for label, row in sched.iterrows():
+        exec_date = cast(pd.Timestamp, label)
         sig = row["signal_date"]
         train_start = sig - pd.DateOffset(years=spec.train_years)
         test_end = min(exec_date + pd.DateOffset(years=spec.test_years) - pd.Timedelta(days=1), end)

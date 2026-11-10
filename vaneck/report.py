@@ -56,7 +56,7 @@ def md_table(df: pd.DataFrame, nd: int = 3, index: bool = True, pct_cols: tuple[
         if pd.api.types.is_float_dtype(col) and col.notna().any() and np.all(np.mod(col.dropna(), 1) == 0) \
                 and c not in pct_cols:
             int_like.add(c)
-    header = ([df.index.name or ""] if index else []) + [str(c) for c in cols]
+    header = ([str(df.index.name or "")] if index else []) + [str(c) for c in cols]
     lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     for idx, row in df.iterrows():
         cells = [str(idx)] if index else []

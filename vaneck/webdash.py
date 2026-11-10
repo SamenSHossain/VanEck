@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -184,8 +184,10 @@ def weight_paths(md: MarketData, splits: list[Split], runs: dict[str, study.Run]
     cols = [c for c in first.columns if any((r.pre.targets[c].abs() > 1e-9).any() for r in runs.values())]
     rows: list[dict] = []
     for name, r in runs.items():
-        for d, w in r.pre.targets[cols].iterrows():
-            signal, regime = seen.get(d, (None, None))
+        for label, w in r.pre.targets[cols].iterrows():
+            d = cast(pd.Timestamp, label)
+            found = seen.get(d)
+            signal, regime = found if found is not None else (None, None)
             row: dict = {"run": name, "kind": r.kind, "date": d.strftime("%Y-%m-%d"),
                          "signal_date": signal.strftime("%Y-%m-%d") if signal is not None else None, "regime": regime}
             row.update({c: round(float(w[c]), 4) for c in cols})
@@ -201,7 +203,8 @@ def book_bands(marks: list[tuple[str, float]]) -> dict:
     curve = pd.Series({pd.Timestamp(k): float(v) for k, v in marks}).sort_index()
     monthly = retire.monthly_returns(curve)
     dd = curve / curve.cummax() - 1.0
-    return {"monthly": [{"month": d.strftime("%Y-%m"), "ret": round(float(v), 6)} for d, v in monthly.items()],
+    months = [(cast(pd.Timestamp, d), v) for d, v in monthly.items()]
+    return {"monthly": [{"month": d.strftime("%Y-%m"), "ret": round(float(v), 6)} for d, v in months],
             "drawdown": [round(float(v), 5) for v in dd.to_numpy()]}
 
 

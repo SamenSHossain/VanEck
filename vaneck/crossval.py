@@ -10,6 +10,7 @@ Three layers, each a list of health ``Check`` objects:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -88,7 +89,7 @@ def peer_divergence(md: MarketData, pairs: dict[str, str] | None = None, limits:
         status = BLOCK if max_gap > limits.peer_jump_block else WARN if (max_gap > limits.peer_jump_warn or low_corr) else OK
         worst_status = max(worst_status, status, key=lambda s: {OK: 0, WARN: 1, BLOCK: 2}[s])
         rows.append({"fund": a, "peer": b, "days": len(r), "corr": corr, "max_one_day_gap": max_gap,
-                     "gap_date": gap.idxmax().date(), "status": status})
+                     "gap_date": cast(pd.Timestamp, gap.idxmax()).date(), "status": status})
     tbl = pd.DataFrame(rows)
     flagged = tbl[tbl["status"] != OK] if len(tbl) else tbl
     detail = "; ".join(f"{r.fund}/{r.peer} corr {r.corr:.2f} max gap {r.max_one_day_gap:.1%} on {r.gap_date}"

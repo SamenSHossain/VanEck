@@ -121,9 +121,9 @@ def simulate(md: MarketData, targets: pd.DataFrame, spec: Spec = SPEC, taxed: bo
         if i > 0:
             cash *= 1.0 + y[i - 1] / 252.0
         if dist[i].any():
-            for j in np.flatnonzero(dist[i] > 0):
-                if units[j] > 0 and np.isfinite(close_prev[i, j]) and close_prev[i, j] > 0:
-                    ledger.distribution(tickers[j], d, units[j] * adj_prev[i, j] * dist[i, j] / close_prev[i, j])
+            for jd in np.flatnonzero(dist[i] > 0):
+                if units[jd] > 0 and np.isfinite(close_prev[i, jd]) and close_prev[i, jd] > 0:
+                    ledger.distribution(tickers[jd], d, units[jd] * adj_prev[i, jd] * dist[i, jd] / close_prev[i, jd])
         if is_exec[i]:
             if last_settled_year is None:
                 last_settled_year = d.year

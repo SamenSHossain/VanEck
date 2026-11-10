@@ -30,7 +30,7 @@ capacity under the pre-registered limits is about $3M.
 pip install -r requirements.txt
 make test            # 92 tests: lookahead + leak canary, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
 make lint            # ruff
-make typecheck       # mypy
+make typecheck       # python -m mypy, with pandas-stubs
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
 ```
 

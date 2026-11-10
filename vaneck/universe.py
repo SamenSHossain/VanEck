@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import combinations
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -57,7 +58,7 @@ def run_gate0(md: MarketData, spec: Spec = SPEC, start=None, end=None,
     up = _upper(corr)
     avg = float(up.mean())
     pairs = list(combinations(tickers, 2))
-    pair_vals = [(a, b, float(corr.loc[a, b])) for a, b in pairs]
+    pair_vals = [(a, b, float(cast(float, corr.loc[a, b]))) for a, b in pairs]
     max_pair = max(pair_vals, key=lambda x: x[2])
 
     roll = {}

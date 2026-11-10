@@ -17,10 +17,11 @@ REGIMES = ("Bull", "Correction", "Crisis", "Stagflation", "Neutral")
 
 def regime_inputs(macro: pd.DataFrame) -> pd.DataFrame:
     spx, vix, tnx, crb = macro["spx"], macro["vix"], macro["tnx"], macro["crb"]
-    prev_year_close = spx.groupby(spx.index.year).last().shift(1)
-    ytd = spx / spx.index.year.map(prev_year_close).to_numpy() - 1.0
+    years = pd.DatetimeIndex(spx.index).year
+    prev_year_close = spx.groupby(years).last().shift(1)
+    ytd = spx / prev_year_close.reindex(years).to_numpy() - 1.0
     drawdown = spx / spx.cummax() - 1.0
-    lag_dates = crb.index - pd.DateOffset(years=1)
+    lag_dates = pd.DatetimeIndex(crb.index) - pd.DateOffset(years=1)
     crb_lag = pd.Series(crb.dropna().reindex(lag_dates, method="ffill").to_numpy(), index=crb.index)
     crb_yoy = crb / crb_lag - 1.0
     return pd.DataFrame({"vix": vix, "spx_ytd": ytd, "spx_drawdown": drawdown,

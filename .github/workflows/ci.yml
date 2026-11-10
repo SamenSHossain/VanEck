@@ -20,7 +20,7 @@ jobs:
       - name: lint
         run: ruff check vaneck tests
       - name: type check
-        run: mypy
+        run: python -m mypy
       - name: unit, property, adversarial and golden tests
         run: python -m pytest -q
       - name: cross-validation against the cached secondary sources

@@ -22,7 +22,7 @@ monitor:
 	python -m vaneck monitor --strategy EqualWeight --mark
 
 typecheck:
-	mypy
+	python -m mypy
 
 cross:
 	python -m vaneck fetch --secondary && python -m vaneck check --cross

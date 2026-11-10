@@ -34,8 +34,8 @@ def design_report(md: MarketData, splits: list[Split], spec: Spec = SPEC, n_boot
     diag = study.run_strategies(md, splits, spec, overlay=False)
     runs = {**strat, **diag}
     bench = base[study.PRIMARY_BENCHMARK].post
-    bench_ann = calendar_year_returns(bench.nav)
-    bench_ann = bench_ann[bench_ann["full_year"]]["return"]
+    bench_years = calendar_year_returns(bench.nav)
+    bench_ann = bench_years[bench_years["full_year"]]["return"]
     bench_mon = monthly_returns(bench.nav)
 
     ann_diff = pd.DataFrame({n: (lambda cy: cy[cy["full_year"]]["return"])(calendar_year_returns(r.post.nav)) - bench_ann

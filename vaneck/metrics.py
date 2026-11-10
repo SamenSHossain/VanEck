@@ -1,6 +1,8 @@
 """Performance statistics."""
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -52,19 +54,20 @@ def max_drawdown(nav: pd.Series) -> tuple[float, pd.Timestamp | None, pd.Timesta
         return float("nan"), None, None
     trough = dd.idxmin()
     peak = nav.loc[:trough].idxmax()
-    return float(dd.min()), peak, trough
+    return float(dd.min()), cast(pd.Timestamp, peak), cast(pd.Timestamp, trough)
 
 
 def calendar_year_returns(nav: pd.Series) -> pd.DataFrame:
     """Calendar-year returns with a flag for partial first/last years."""
     nav = nav.dropna()
     out = []
-    for year, chunk in nav.groupby(nav.index.year):
+    for label, chunk in nav.groupby(pd.DatetimeIndex(nav.index).year):
+        year = int(cast(int, label))
         prev = nav.loc[:chunk.index[0] - pd.Timedelta(days=1)]
         start_val = prev.iloc[-1] if len(prev) else chunk.iloc[0]
         ret = chunk.iloc[-1] / start_val - 1.0
         full = (len(prev) > 0) and (chunk.index[-1] >= pd.Timestamp(f"{year}-12-28"))
-        out.append({"year": int(year), "return": float(ret), "full_year": bool(full)})
+        out.append({"year": year, "return": float(ret), "full_year": bool(full)})
     return pd.DataFrame(out).set_index("year")
 
 
@@ -120,7 +123,7 @@ def regime_breakdown(nav: pd.Series, regimes: pd.Series, rf_annual: pd.Series) -
             worst = min(worst, float((n / n.cummax() - 1.0).min()))
         rows.append({
             "regime": name, "days": int(len(rr)), "share_of_days": len(rr) / len(r),
-            "ann_return": float((1.0 + rr).prod() ** (TRADING_DAYS / len(rr)) - 1.0),
+            "ann_return": float(cast(float, (1.0 + rr).prod()) ** (TRADING_DAYS / len(rr)) - 1.0),
             "ann_vol": float(rr.std(ddof=1) * np.sqrt(TRADING_DAYS)),
             "sharpe": float(ex.mean() / ex.std(ddof=1) * np.sqrt(TRADING_DAYS)) if ex.std(ddof=1) > 0 else np.nan,
             "mdd_concat": mdd_concat, "mdd_episode": worst,

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -66,7 +66,7 @@ def run_ladder(md: MarketData, splits: list[Split], spec: Spec = SPEC, policies:
             rows.append(_row(pname, pol, pre, post, p0_pre))
     tbl = pd.DataFrame(rows).set_index(["portfolio", "policy"])
     base = tbl.xs(list(policies)[0], level="policy")["sharpe_post"]
-    tbl["sharpe_post_gain_vs_p0"] = [r.sharpe_post - base[p] for (p, _), r in tbl.iterrows()]
+    tbl["sharpe_post_gain_vs_p0"] = [r.sharpe_post - base[cast(tuple, label)[0]] for label, r in tbl.iterrows()]
     return tbl, sims
 
 
@@ -90,13 +90,15 @@ def sensitivities(md: MarketData, splits: list[Split], spec: Spec = SPEC) -> pd.
     rows = []
     st_spec = replace(spec, tax_rate_short=0.46)
     tbl_st, _ = run_ladder(md, splits, st_spec, {p0.name: p0, p3.name: p3}, ports, CostModel(st_spec))
-    for (p, pol), r in tbl_st.iterrows():
+    for label, r in tbl_st.iterrows():
+        p, pol = cast(tuple, label)
         rows.append({"variant": "short-term gains taxed at 46%", "portfolio": p, "policy": pol,
                      "sharpe_post": r.sharpe_post, "cagr_post": r.cagr_post, "tax_pct_yr": r.tax_pct_yr})
     no_gold = {k: v for k, v in SUBSTITUTES.items() if k != "OUNZ"}
     p3b = p3.with_(name="P3 without OUNZ/IAU pair", substitutes=tuple(no_gold.items()))
     tbl_ng, _ = run_ladder(md, splits, spec, {p0.name: p0, p3b.name: p3b}, ports, CostModel(spec))
-    for (p, pol), r in tbl_ng.iterrows():
+    for label, r in tbl_ng.iterrows():
+        p, pol = cast(tuple, label)
         rows.append({"variant": "harvesting without OUNZ/IAU", "portfolio": p, "policy": pol,
                      "sharpe_post": r.sharpe_post, "cagr_post": r.cagr_post, "tax_pct_yr": r.tax_pct_yr})
     return pd.DataFrame(rows).set_index(["variant", "portfolio", "policy"])

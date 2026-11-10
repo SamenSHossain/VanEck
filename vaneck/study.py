@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -188,13 +189,13 @@ def gate3(regime_tbls: dict[str, pd.DataFrame], winners: list[str], ew_name: str
             if reg not in t.index or reg not in ew.index:
                 rows.append({"strategy": name, "regime": reg, "note": "regime absent in sample"})
                 continue
+            mdd, ew_mdd = cast(float, t.loc[reg, "mdd_concat"]), cast(float, ew.loc[reg, "mdd_concat"])
             rows.append({
-                "strategy": name, "regime": reg, "days": int(t.loc[reg, "days"]),
+                "strategy": name, "regime": reg, "days": int(cast(int, t.loc[reg, "days"])),
                 "strategy_sharpe": t.loc[reg, "sharpe"], "ew_sharpe": ew.loc[reg, "sharpe"],
-                "strategy_mdd": t.loc[reg, "mdd_concat"], "ew_mdd": ew.loc[reg, "mdd_concat"],
-                "mdd_within_tolerance": bool(t.loc[reg, "mdd_concat"]
-                                             >= ew.loc[reg, "mdd_concat"] - spec.gate3_crisis_mdd_tolerance),
-                "reduces_drawdown_vs_ew": bool(t.loc[reg, "mdd_concat"] > ew.loc[reg, "mdd_concat"]),
+                "strategy_mdd": mdd, "ew_mdd": ew_mdd,
+                "mdd_within_tolerance": bool(mdd >= ew_mdd - spec.gate3_crisis_mdd_tolerance),
+                "reduces_drawdown_vs_ew": bool(mdd > ew_mdd),
             })
     return pd.DataFrame(rows)
 

@@ -156,7 +156,7 @@ def run_phase2_section(md, splits, spec, outdir, plots, base, n_boot, informatio
         report.fig_sharpe_dumbbell(all_tbl, fd / "phase2_sharpe_pre_post.png", "Sharpe ratio before and after tax, all runs")
         report.fig_regimes(reg_oos, md.macro["spx"], fd / "phase2_regimes.png",
                            "Ex-ante regime calendar over the out-of-sample window")
-        best = tests_post["mean_annual_excess"].astype(float).idxmax()
+        best = str(tests_post["mean_annual_excess"].astype(float).idxmax())
         report.fig_drawdown({"EqualWeight": base["EqualWeight"].post.nav, best: strat[best].post.nav,
                              study.PRIMARY_BENCHMARK: bench.post.nav}, fd / "phase2_drawdowns.png",
                             f"Post-tax drawdowns: equal weight vs {best} vs 60/40", labels=SHORT)

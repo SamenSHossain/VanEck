@@ -17,6 +17,7 @@ import logging
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -139,7 +140,7 @@ class MarketData:
 
     @property
     def index(self) -> pd.DatetimeIndex:
-        return self.adj_close.index
+        return cast(pd.DatetimeIndex, self.adj_close.index)
 
     @property
     def end(self) -> pd.Timestamp:
@@ -210,7 +211,7 @@ def build_market_data(spec: Spec = SPEC, raw_dir: Path = RAW_DIR,
 # --------------------------------------------------------------------------- #
 def data_quality_report(md: MarketData, raw_dir: Path = RAW_DIR) -> pd.DataFrame:
     """Per-ticker sanity checks used in Phase 1.1."""
-    rows = []
+    rows: list[dict[str, object]] = []
     for t in md.adj_close.columns:
         px = md.adj_close[t].dropna()
         if px.empty:

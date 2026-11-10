@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 
@@ -53,8 +54,8 @@ def decision_split(md: MarketData, as_of=None, spec: Spec = SPEC) -> Split:
     """Signal on the last bar at or before ``as_of``; execute on the next trading day."""
     idx = md.index
     sig = idx[-1] if as_of is None else idx[idx <= pd.Timestamp(as_of)][-1]
-    pos = idx.get_loc(sig)
-    exec_date = idx[pos + 1] if pos + 1 < len(idx) else sig + pd.offsets.BDay(1)
+    pos = cast(int, idx.get_loc(sig))
+    exec_date: pd.Timestamp = idx[pos + 1] if pos + 1 < len(idx) else sig + pd.offsets.BDay(1)
     return Split(train_start=sig - pd.DateOffset(years=spec.train_years), signal_date=sig,
                  exec_date=exec_date, test_end=exec_date)
 

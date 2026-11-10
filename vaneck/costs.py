@@ -9,6 +9,7 @@ The quoted spread is looked up by the fund's trailing average dollar volume
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 
@@ -25,7 +26,7 @@ class CostModel:
         self.impact = impact_bps_per_pct_adv
         if override_file is not None and Path(override_file).exists():
             tbl = pd.read_csv(override_file)
-            self.overrides.update({str(r.ticker): float(r.spread_bps) for r in tbl.itertuples()})
+            self.overrides.update({str(r.ticker): float(cast(float, r.spread_bps)) for r in tbl.itertuples()})
 
     # -- lookups ------------------------------------------------------------ #
     def spread_bps(self, ticker: str, adv_dollars: float) -> float:
@@ -71,7 +72,8 @@ class CostModel:
     def cost_table(self, md: MarketData, asof) -> pd.DataFrame:
         adv = self.adv_table(md).loc[:asof].iloc[-1]
         rows = []
-        for t, a in adv.items():
+        for label, a in adv.items():
+            t = str(label)
             rows.append({"ticker": t, "adv_dollars": a, "spread_bps": self.spread_bps(t, a),
                          "one_way_bps": self.one_way_bps(t, a),
                          "round_trip_bps": 2 * self.one_way_bps(t, a)})

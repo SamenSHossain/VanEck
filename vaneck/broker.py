@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, cast
 
 import numpy as np
 import pandas as pd
@@ -51,7 +51,7 @@ class PaperBroker:
         self.book: dict | None = json.loads(self.path.read_text()) if self.path.exists() else None
         book = self.book or {}
         self.ledger = TaxLedger.from_dict(book["tax"], spec) if "tax" in book else TaxLedger(spec, taxed=True)
-        self._adv = None
+        self._adv: pd.DataFrame | None = None
 
     # -- lifecycle ------------------------------------------------------------ #
     @property
@@ -146,20 +146,20 @@ class PaperBroker:
         vintage = pd.Timestamp(b["data_vintage"])
         pos = b["positions"]
         for d in days:
-            prev = self.md.index[self.md.index.get_loc(d) - 1]
-            b["cash"] *= 1.0 + float(y.loc[prev]) / 252.0
+            prev = self.md.index[cast(int, self.md.index.get_loc(d)) - 1]
+            b["cash"] *= 1.0 + float(cast(float, y.loc[prev])) / 252.0
             for t in list(pos):
                 sh = pos[t]
                 if sh == 0:
                     continue
-                div = float(self.md.distributions.at[d, t]) if t in self.md.distributions.columns else 0.0
+                div = float(cast(float, self.md.distributions.at[d, t])) if t in self.md.distributions.columns else 0.0
                 if div > 0:
                     amt = sh * div
                     b["cash"] += amt
                     self.ledger.income(d, amt)
                     b["cash_flows"].append({"date": str(d.date()), "ticker": t, "type": "dividend", "amount": amt})
                 if self.md.splits is not None and d > vintage:
-                    r = float(self.md.splits.at[d, t]) if t in self.md.splits.columns else 0.0
+                    r = float(cast(float, self.md.splits.at[d, t])) if t in self.md.splits.columns else 0.0
                     if r > 0:
                         pos[t] = sh * r
                         for lot in self.ledger.lots[t]:

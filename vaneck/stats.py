@@ -44,21 +44,21 @@ def bootstrap_sharpe_diff(nav_x: pd.Series, nav_y: pd.Series, rf: pd.Series, n_b
     """
     ex = excess_returns(nav_x, rf)
     ey = excess_returns(nav_y, rf).reindex(ex.index)
-    ex, ey = ex.to_numpy(), ey.to_numpy()
-    n = len(ex)
+    ax, ay = ex.to_numpy(), ey.to_numpy()
+    n = len(ax)
     rng = np.random.default_rng(seed)
 
     def sh(a):
         s = a.std(ddof=1)
         return a.mean() / s * np.sqrt(TRADING_DAYS) if s > 0 else 0.0
 
-    obs = sh(ex) - sh(ey)
+    obs = sh(ax) - sh(ay)
     n_blocks = int(np.ceil(n / block))
     diffs = np.empty(n_boot)
     for b in range(n_boot):
         starts = rng.integers(0, n - block + 1, size=n_blocks)
         idx = (starts[:, None] + np.arange(block)[None, :]).ravel()[:n]
-        diffs[b] = sh(ex[idx]) - sh(ey[idx])
+        diffs[b] = sh(ax[idx]) - sh(ay[idx])
     p = float(np.mean(diffs <= 0.0))
     out: dict = {"sharpe_diff": float(obs), "p_one_sided": p,
                  "ci_low": float(np.percentile(diffs, 2.5)), "ci_high": float(np.percentile(diffs, 97.5))}

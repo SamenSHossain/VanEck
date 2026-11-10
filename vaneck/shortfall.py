@@ -50,7 +50,7 @@ def pre_trade_weights(d: dict, fills: list[dict], close: pd.DataFrame) -> dict |
         if pd.Timestamp(f["date"]) < executed_on:
             shares[f["ticker"]] += (1.0 if f["side"] == "BUY" else -1.0) * float(f["shares"])
     prices = close.loc[signal]
-    weights = {}
+    weights: dict[str, float] = {}
     for ticker, n in shares.items():
         if abs(n) <= 1e-9:
             continue

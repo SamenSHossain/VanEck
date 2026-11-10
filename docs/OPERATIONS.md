@@ -212,9 +212,15 @@ after the opening it is fixed.
 
 ## Type checking, packaging, container
 
-`make typecheck` runs mypy (CI does too); `pip install -e .` provides the
-`vaneck` console command; `make docker` builds an image that runs the test
-suite at build time and defaults to the health check.
+`make typecheck` runs `python -m mypy` (CI does too); `pip install -e .`
+provides the `vaneck` console command; `make docker` builds an image that
+runs the test suite at build time and defaults to the health check.
+
+Run the type check through the project's interpreter, as above, and not
+through a separately installed `mypy`. An isolated copy cannot see pandas,
+numpy or `pandas-stubs`; with `ignore_missing_imports` set it then treats
+every pandas object as untyped and reports success whatever the code does.
+That is how this branch showed a clean type check locally while CI failed.
 
 ## Connecting a venue
 
