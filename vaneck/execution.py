@@ -28,7 +28,7 @@ class ExecutionPolicy:
     harvest: bool = False
     harvest_min_loss_pct: float = 0.05       # of lot basis
     harvest_min_loss_equity_bps: float = 5.0 # lot loss must also be >= this many bps of equity
-    harvest_no_recent_buy_days: int = 30     # skip harvesting a fund bought this recently
+    harvest_no_recent_buy_days: int = 31     # skip harvesting a fund bought in the previous 30 days, day 30 included
     no_rebuy_days: int = 31                  # after a loss sale, do not repurchase the same fund
     substitutes: tuple[tuple[str, str], ...] = ()
     max_participation: float | None = None   # per-order cap as a fraction of trailing dollar volume

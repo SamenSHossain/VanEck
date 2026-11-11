@@ -231,7 +231,7 @@ Rules (all fixed now):
 * **Harvesting.** At each monthly decision, for every held fund, lots whose
   unrealized loss is at least 5% of the lot's basis and at least 5 bps of
   portfolio equity are sold, provided the fund was not bought in the previous
-  30 days. Proceeds buy the fund's substitute, which then serves the fund's
+  30 days. Day 30 counts as inside (set on 2026-11-11; see section 20). Proceeds buy the fund's substitute, which then serves the fund's
   target as part of the same exposure group. A fund that was loss-sold is not
   repurchased for 31 days. When the substitute itself qualifies for harvesting,
   it is sold and the original fund is bought back (roles alternate).
@@ -461,13 +461,21 @@ single-threaded BLAS, and two environments (Python 3.11 with numpy 2.4, Python
 the MaxSharpe strategies and comes from the optimizer's stopping tolerance;
 the golden test allows 1e-6. `docs/OPERATIONS.md` gives the command.
 
-**Found and left unchanged, for the owner of this protocol to decide.** The
+**Change of 2026-11-11, decided by the owner of this protocol.** The
 harvesting rule of section 14 skips a fund "bought in the previous 30 days".
-The code tests `days < 30`, so a fund bought exactly 30 days earlier is still
-harvested, while the ledger's wash-sale window of section 6 includes day 30
-and disallows part of that loss. With monthly rebalancing a 30-day gap is
-common. In the P3 runs this happened four times, once in each of the equal
-weight and 60/40 VanEck runs before and after tax, with $1,275 to $47,171 of
-the harvested loss disallowed. A 31-day test would agree with the ledger. It
-is a change to a pre-registered threshold and would restate the P3 column, so
-it has not been made here.
+The code tested `days < 30`, so a fund bought exactly 30 days earlier was
+still harvested, while the ledger's wash-sale window of section 6 includes day
+30 and disallowed part of that loss. This happened four times in the P3 runs,
+with $1,275 to $47,171 disallowed. The test is now `days < 31`, which agrees
+with the ledger. With monthly rebalancing a 30-day gap is common, so this
+defers a number of harvests by a month and restates the P3 column:
+
+| P3 | Before | After |
+|---|---|---|
+| Equal weight, post-tax Sharpe | 0.4441 | 0.4404 |
+| 60/40 VanEck, post-tax Sharpe | 0.3696 | 0.4029 |
+| DriftxMinVar, post-tax Sharpe | 0.4041 | 0.4099 |
+| Gate 1 margin under P3 | 0.0744 | 0.0375 |
+
+The margin stays far below 0.20. P0 to P2 and everything outside extension 1
+are unchanged.

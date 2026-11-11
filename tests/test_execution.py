@@ -77,6 +77,12 @@ def test_harvest_sells_loss_lots_and_buys_substitute():
     hold["X"].last_buy = D - pd.Timedelta(days=10)
     trades = plan(D, pd.Series({"X": 0.5, "Y": 0.5}), hold, cash=0.0, prices=prices, policy=pol)
     assert all(tr.reason != "harvest" for tr in trades)
+    # day 30 is still inside the ledger's wash-sale window, day 31 is not
+    half = pd.Series({"X": 0.5, "Y": 0.5})
+    hold["X"].last_buy = D - pd.Timedelta(days=30)
+    assert all(tr.reason != "harvest" for tr in plan(D, half, hold, cash=0.0, prices=prices, policy=pol))
+    hold["X"].last_buy = D - pd.Timedelta(days=31)
+    assert any(tr.reason == "harvest" for tr in plan(D, half, hold, cash=0.0, prices=prices, policy=pol))
     # a substitute loss-sold within the no-rebuy window blocks the swap
     hold["X"].last_buy = OLD
     hold["S"] = HoldingView("S", 50.0, [], last_loss_sale=D - pd.Timedelta(days=5))
