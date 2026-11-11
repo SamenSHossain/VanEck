@@ -5,22 +5,22 @@ fixed in `docs/SPEC.md` sections 14 to 16 before the first run. Generated tables
 and figures: `EXTENSIONS.md`. Window: 2017-06-01 to 2024-12-31, the main study's
 out-of-sample period.
 
-## 1. Tax-aware execution: worth 0.03 to 0.08 Sharpe, changes no verdict
+## 1. Tax-aware execution: worth 0.04 to 0.10 Sharpe, changes no verdict
 
 | Post-tax Sharpe | P0 calendar, FIFO | P1 TAXOPT lots | P2 + 20% drift band | P3 + loss harvesting |
 |---|---|---|---|---|
 | Equal weight | 0.37 | 0.41 | 0.44 | 0.44 |
-| 60/40 VanEck | 0.30 | 0.34 | 0.36 | 0.37 |
+| 60/40 VanEck | 0.30 | 0.34 | 0.36 | 0.40 |
 | 60/40 SPY/BND | 0.48 | 0.50 | 0.51 | 0.53 |
-| Drift x MinVar (no overlay) | 0.37 | 0.39 | 0.39 | 0.40 |
-| **Gate 1 margin (EW minus 60/40 VanEck)** | **0.07** | **0.07** | **0.08** | **0.07** |
+| Drift x MinVar (no overlay) | 0.37 | 0.39 | 0.39 | 0.41 |
+| **Gate 1 margin (EW minus 60/40 VanEck)** | **0.07** | **0.07** | **0.08** | **0.04** |
 
 | Equal weight under each policy | Tax drag (% NAV/yr) | One-way turnover | Costs (bps/yr) | Tracking error vs P0, pre-tax |
 |---|---|---|---|---|
 | P0 | 2.54 | 21% | 3.9 | - |
 | P1 | 1.85 | 21% | 3.9 | 0.0% |
 | P2 | 1.53 | 5.5% | 1.8 | 0.7% |
-| P3 | 0.95 | 30% | 4.8 | 2.7% |
+| P3 | 0.99 | 31% | 4.9 | 1.4% |
 
 What this says:
 
@@ -31,15 +31,15 @@ What this says:
   within 0.7% a year. This is the policy to run.
 * **Harvesting is not free.** It realises 40 loss sales for equal weight over
   the window and lowers tax drag to under 1% of NAV, but the substitutes track
-  imperfectly (2.7% tracking error, 0.3 points of pre-tax return given back)
+  imperfectly (1.4% tracking error, 0.3 points of pre-tax return given back)
   and turnover rises again. For equal weight it adds nothing after P2; for the
-  two 60/40 portfolios it adds 0.01 to 0.02. Dropping the greyest pair (OUNZ/IAU) made
-  equal weight's result slightly better, not worse, so the pair is not what
-  carries the benefit.
+  two 60/40 portfolios it adds 0.02 to 0.04. Dropping the greyest pair
+  (OUNZ/IAU) lowers equal weight's result only slightly, 0.44 to 0.43, so the
+  pair is not what carries the benefit.
 * **Taxing short-term gains at 46% changes nothing material** (P3 still 0.44).
-* **The Gate 1 verdict stands.** The margin moves between 0.07 and 0.08 against
-  a 0.20 threshold, because every policy helps the benchmark as much as the
-  candidate. Tax-aware execution is an operational improvement, not evidence
+* **The Gate 1 verdict stands.** The margin moves between 0.04 and 0.08 against
+  a 0.20 threshold, because every policy helps the benchmark at least as much
+  as the candidate. Tax-aware execution is an operational improvement, not evidence
   for the universe.
 
 Operationally, the same planner now drives the paper broker (`--policy P2`),
@@ -54,6 +54,11 @@ sales 43 to 40. Separately, equal drift scores are now ranked by a stated rule
 (SPEC section 20). That moved the Drift x MinVar rows of sections 1 and 3 and
 the Drift figures of section 2 in the third decimal: 67 years became 64, 43
 bps became 42. No outcome changed.
+
+**Changed on 2026-11-11.** The harvest test now treats a fund bought exactly
+30 days earlier as recently bought, which agrees with the ledger's wash-sale
+window (SPEC section 20). This restates the P3 column once more: 60/40 VanEck
+0.37 to 0.40, the P3 margin 0.07 to 0.04. P0 to P2 are unchanged.
 
 ## 2. Statistical design: the original test could not have passed
 
