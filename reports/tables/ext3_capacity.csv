@@ -1,0 +1,5 @@
+portfolio,capacity_aum,drag_limit_bps,te_limit_bps,binding
+EqualWeight,3000000.0,25.0,50.0,tracking
+60/40 VanEck (60% EW equity funds / 40% BND),3000000.0,25.0,50.0,tracking
+DriftxMinVar,0.0,25.0,50.0,drag+tracking
+MomentumxMaxSharpe,0.0,25.0,50.0,drag+tracking

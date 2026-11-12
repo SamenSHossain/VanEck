@@ -1,0 +1,9 @@
+{
+  "oos_start": "2017-06-01",
+  "oos_end": "2024-12-31",
+  "n_rebalances": 91,
+  "gate0": true,
+  "gate1": false,
+  "gate2": false,
+  "gate2_winners": []
+}

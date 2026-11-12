@@ -1,0 +1,367 @@
+{
+  "as_of": "2026-11-06",
+  "status": "warn",
+  "checks": [
+    {
+      "name": "last_bar_alignment",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": "all tickers priced on the latest bar"
+    },
+    {
+      "name": "recent_nans",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "price_jump",
+      "status": "ok",
+      "value": 0.1121,
+      "limit": 0.25,
+      "detail": ""
+    },
+    {
+      "name": "zero_volume_last_bar",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "adjustment_breaks",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "macro_sanity",
+      "status": "ok",
+      "value": "ok",
+      "limit": "",
+      "detail": ""
+    },
+    {
+      "name": "bar_staleness_days",
+      "status": "ok",
+      "value": 2,
+      "limit": 5,
+      "detail": "last bar 2026-11-06, now 2026-11-08"
+    },
+    {
+      "name": "cache_age_days",
+      "status": "ok",
+      "value": 0.0,
+      "limit": 3,
+      "detail": "fetched 2026-11-08 20:37Z"
+    },
+    {
+      "name": "signal_history",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": ""
+    },
+    {
+      "name": "fred_vix",
+      "status": "ok",
+      "value": 0.0,
+      "limit": 0.05,
+      "detail": "overlap 749 days to 2026-11-05; max |diff| 2.61; 0.1% of days beyond 0.05"
+    },
+    {
+      "name": "fred_tnx",
+      "status": "ok",
+      "value": 0.003,
+      "limit": 0.05,
+      "detail": "overlap 744 days to 2026-11-05; max |diff| 0.06; 0.1% of days beyond 0.05"
+    },
+    {
+      "name": "fred_irx",
+      "status": "ok",
+      "value": 0.013,
+      "limit": 0.06,
+      "detail": "overlap 744 days to 2026-11-05; max |diff| 0.08; 0.3% of days beyond 0.06"
+    },
+    {
+      "name": "fred_spx",
+      "status": "ok",
+      "value": 0.0,
+      "limit": 0.001,
+      "detail": "overlap 749 days to 2026-11-05; max |diff| 5.3e-08; 0.0% of days beyond 0.001"
+    },
+    {
+      "name": "peer_divergence",
+      "status": "ok",
+      "value": 0,
+      "limit": 0,
+      "detail": "9 pairs within limits"
+    },
+    {
+      "name": "corporate_actions",
+      "status": "warn",
+      "value": 0,
+      "limit": 0,
+      "detail": "review: REMX"
+    },
+    {
+      "name": "secondary_providers",
+      "status": "warn",
+      "value": 1,
+      "limit": 0,
+      "detail": "unavailable: stooq:SMH"
+    }
+  ],
+  "crossval_tables": {
+    "macro": [
+      {
+        "series": "vix",
+        "overlap_days": 749,
+        "last_common": "2026-11-05",
+        "yahoo_last": 28.18,
+        "fred_last": 28.18,
+        "max_abs_diff": 2.610000999999997,
+        "share_beyond_tol": 0.0013351134846461949,
+        "status": "ok"
+      },
+      {
+        "series": "tnx",
+        "overlap_days": 744,
+        "last_common": "2026-11-05",
+        "yahoo_last": 4.837,
+        "fred_last": 4.84,
+        "max_abs_diff": 0.0600000000000005,
+        "share_beyond_tol": 0.0013440860215053765,
+        "status": "ok"
+      },
+      {
+        "series": "irx",
+        "overlap_days": 744,
+        "last_common": "2026-11-05",
+        "yahoo_last": 3.987,
+        "fred_last": 4.0,
+        "max_abs_diff": 0.08000000000000007,
+        "share_beyond_tol": 0.002688172043010753,
+        "status": "ok"
+      },
+      {
+        "series": "spx",
+        "overlap_days": 749,
+        "last_common": "2026-11-05",
+        "yahoo_last": 7353.72998,
+        "fred_last": 7353.73,
+        "max_abs_diff": 5.299825153136134e-08,
+        "share_beyond_tol": 0.0,
+        "status": "ok"
+      }
+    ],
+    "peers": [
+      {
+        "fund": "SMH",
+        "peer": "SOXX",
+        "days": 250,
+        "corr": 0.9893677944584883,
+        "max_one_day_gap": 0.017712663989943866,
+        "gap_date": "2026-06-02",
+        "status": "ok"
+      },
+      {
+        "fund": "MOAT",
+        "peer": "QUAL",
+        "days": 250,
+        "corr": 0.7330308109616581,
+        "max_one_day_gap": 0.020986387715627886,
+        "gap_date": "2026-10-22",
+        "status": "ok"
+      },
+      {
+        "fund": "GDX",
+        "peer": "RING",
+        "days": 250,
+        "corr": 0.9956972539579496,
+        "max_one_day_gap": 0.010408340954582096,
+        "gap_date": "2026-02-20",
+        "status": "ok"
+      },
+      {
+        "fund": "ANGL",
+        "peer": "FALN",
+        "days": 250,
+        "corr": 0.9681524406479229,
+        "max_one_day_gap": 0.0025380898993112577,
+        "gap_date": "2026-10-21",
+        "status": "ok"
+      },
+      {
+        "fund": "REMX",
+        "peer": "PICK",
+        "days": 250,
+        "corr": 0.79100703074408,
+        "max_one_day_gap": 0.055178178066955796,
+        "gap_date": "2026-04-16",
+        "status": "ok"
+      },
+      {
+        "fund": "HAP",
+        "peer": "GNR",
+        "days": 250,
+        "corr": 0.9656851909287,
+        "max_one_day_gap": 0.009017476516571032,
+        "gap_date": "2026-01-30",
+        "status": "ok"
+      },
+      {
+        "fund": "FLTR",
+        "peer": "FLOT",
+        "days": 250,
+        "corr": 0.4977611111974863,
+        "max_one_day_gap": 0.0017721836975270744,
+        "gap_date": "2026-03-30",
+        "status": "ok"
+      },
+      {
+        "fund": "PFXF",
+        "peer": "PFF",
+        "days": 250,
+        "corr": 0.9094357966826268,
+        "max_one_day_gap": 0.011410196110497317,
+        "gap_date": "2026-08-03",
+        "status": "ok"
+      },
+      {
+        "fund": "OUNZ",
+        "peer": "IAU",
+        "days": 250,
+        "corr": 0.9997807928758328,
+        "max_one_day_gap": 0.001703832013937756,
+        "gap_date": "2026-07-09",
+        "status": "ok"
+      }
+    ],
+    "corporate_actions": [
+      {
+        "distributions": 14,
+        "factor_jumps": 14,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.0212443095599393,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 14,
+        "factor_jumps": 14,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.021565885300038962,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 19,
+        "factor_jumps": 19,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.017185994769868127,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 173,
+        "factor_jumps": 173,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.015075187969924813,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 14,
+        "factor_jumps": 14,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.10524672299077083,
+        "worst_date": "",
+        "status": "warn"
+      },
+      {
+        "distributions": 18,
+        "factor_jumps": 18,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.03249288328588858,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 184,
+        "factor_jumps": 184,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.00552050451417569,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 170,
+        "factor_jumps": 170,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.02117780294450736,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 0,
+        "factor_jumps": 0,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.0,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 108,
+        "factor_jumps": 108,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.00805241339397006,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 232,
+        "factor_jumps": 232,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.007251243600715333,
+        "worst_date": "",
+        "status": "ok"
+      },
+      {
+        "distributions": 201,
+        "factor_jumps": 201,
+        "unmatched_jumps": 0,
+        "unmatched_distributions": 0,
+        "size_mismatches": 0,
+        "max_distribution_yield": 0.011856677138218986,
+        "worst_date": "",
+        "status": "ok"
+      }
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+"""Transaction-cost model (Phase 1.3).
+
+one_way_cost = (quoted_spread / 2 + slippage) * |notional| + regulatory fee per trade
+
+The quoted spread is looked up by the fund's trailing average dollar volume
+(``cost[fund][volume_level]``) unless an explicit override is supplied in
+``data/spreads_override.csv`` (columns: ticker, spread_bps) from live quotes.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import cast
+
+import pandas as pd
+
+from .config import DATA_DIR, SPEC, Spec
+from .data import MarketData
+
+
+class CostModel:
+    def __init__(self, spec: Spec = SPEC, overrides: dict[str, float] | None = None,
+                 override_file: Path | None = DATA_DIR / "spreads_override.csv",
+                 impact_bps_per_pct_adv: float = 0.0):
+        self.spec = spec
+        self.overrides = dict(overrides or {})
+        self.impact = impact_bps_per_pct_adv
+        if override_file is not None and Path(override_file).exists():
+            tbl = pd.read_csv(override_file)
+            self.overrides.update({str(r.ticker): float(cast(float, r.spread_bps)) for r in tbl.itertuples()})
+
+    # -- lookups ------------------------------------------------------------ #
+    def spread_bps(self, ticker: str, adv_dollars: float) -> float:
+        if ticker in self.overrides:
+            return self.overrides[ticker]
+        if adv_dollars is None or pd.isna(adv_dollars):
+            adv_dollars = 0.0
+        for floor, bps in self.spec.spread_tiers_bps:
+            if adv_dollars >= floor:
+                return bps
+        return self.spec.spread_tiers_bps[-1][1]
+
+    def one_way_bps(self, ticker: str, adv_dollars: float, notional: float = 0.0) -> float:
+        bps = self.spread_bps(ticker, adv_dollars) / 2.0 + self.spec.slippage_bps
+        if self.impact and adv_dollars and adv_dollars > 0:
+            bps += self.impact * (100.0 * abs(notional) / adv_dollars)
+        return bps
+
+    def impact_bps(self, notional: float, adv_dollars: float, daily_vol: float | None) -> float:
+        """Square-root market impact (SPEC s.16): coef x daily vol (bps) x sqrt(notional / ADV)."""
+        if not self.spec.impact_coef or daily_vol is None or not adv_dollars or adv_dollars <= 0 or pd.isna(daily_vol):
+            return 0.0
+        return self.spec.impact_coef * daily_vol * 1e4 * (abs(float(notional)) / adv_dollars) ** 0.5
+
+    def trade_cost(self, ticker: str, notional: float, adv_dollars: float, daily_vol: float | None = None) -> float:
+        """Dollar cost of trading ``notional`` dollars (either direction)."""
+        n = abs(float(notional))
+        if n <= 0.0:
+            return 0.0
+        bps = self.one_way_bps(ticker, adv_dollars, n) + self.impact_bps(n, adv_dollars, daily_vol)
+        return n * bps / 1e4 + self.spec.fee_per_trade
+
+    # -- data helpers -------------------------------------------------------- #
+    def adv_table(self, md: MarketData) -> pd.DataFrame:
+        """Trailing average dollar volume, lagged one day (known at the signal date)."""
+        dv = md.dollar_volume()
+        return dv.rolling(self.spec.adv_lookback, min_periods=20).mean().shift(1)
+
+    def vol_table(self, md: MarketData) -> pd.DataFrame:
+        """Trailing daily return volatility, lagged one day (known at the signal date)."""
+        return md.returns().rolling(self.spec.adv_lookback, min_periods=20).std(ddof=1).shift(1)
+
+    def cost_table(self, md: MarketData, asof) -> pd.DataFrame:
+        adv = self.adv_table(md).loc[:asof].iloc[-1]
+        rows = []
+        for label, a in adv.items():
+            t = str(label)
+            rows.append({"ticker": t, "adv_dollars": a, "spread_bps": self.spread_bps(t, a),
+                         "one_way_bps": self.one_way_bps(t, a),
+                         "round_trip_bps": 2 * self.one_way_bps(t, a)})
+        return pd.DataFrame(rows).set_index("ticker")

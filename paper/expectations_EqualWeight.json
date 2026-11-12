@@ -1,0 +1,17 @@
+{
+  "strategy": "EqualWeight",
+  "policy": "P0 calendar (legacy)",
+  "window": [
+    "2017-06-01",
+    "2024-12-31"
+  ],
+  "n_months": 91,
+  "monthly_return_p5": -0.04972794166306094,
+  "monthly_return_median": 0.00916422538015782,
+  "rolling_sharpe_12m_p5": -0.891609050282618,
+  "max_drawdown": -0.2848227315795244,
+  "drawdown_retire_level": -0.35602841447440553,
+  "frozen_utc": "2026-11-08T21:58:20Z",
+  "config_hash": "e691fafac8d70a1e",
+  "data_hash": "ab858d0ef71cb3ad"
+}

@@ -1,0 +1,21 @@
+{
+  "config_hash": "e691fafac8d70a1e",
+  "data_hash": "ab858d0ef71cb3ad",
+  "created_utc": "2026-11-11T21:13:07Z",
+  "files": [
+    "ext1_policy_ladder",
+    "ext3_capacity_curve",
+    "gate1_baselines",
+    "phase2_strategies"
+  ],
+  "rtol": 1e-06,
+  "atol": 1e-09,
+  "versions": {
+    "python": "3.13.18",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "yfinance": "1.8.0",
+    "matplotlib": "3.11.2"
+  }
+}

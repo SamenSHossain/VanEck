@@ -1,0 +1,38 @@
+name: monthly-cycle
+
+# Automation for the monthly cycle: refresh data, run the health gate, produce a
+# dry-run decision and the monitor report as artifacts. Nothing is committed and
+# nothing is executed; a human reviews the decision record before any --submit.
+on:
+  schedule:
+    - cron: "30 22 1 * *"
+  workflow_dispatch:
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: refresh data cache
+        run: python -m vaneck fetch --force --secondary
+      - name: data health gate
+        run: python -m vaneck check --json --cross
+      - name: dry-run decision (latest bar)
+        run: python -m vaneck --log-json rebalance --strategy EqualWeight --init-cash 10000000
+      - name: monitor the paper book
+        continue-on-error: true
+        run: python -m vaneck monitor --strategy EqualWeight --mark
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monthly-cycle
+          path: |
+            reports/health.json
+            reports/monitor_*.md
+            reports/monitor_*.json
+            paper/decisions

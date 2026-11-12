@@ -1,0 +1,7 @@
+,value,threshold,ok,decisive
+EW post-tax Sharpe >= 60/40 (plan def.) + 0.20,0.07056845198393286,0.2,False,True
+EW post-tax Sharpe >= 60/40 classic + 0.20 (reference),-0.10870912835355534,0.2,False,False
+EW max drawdown not worse than -40%,-0.28616062097981143,-0.4,True,True
+EW one-way turnover < 15%/yr,0.20935178657219222,0.15,False,True
+EW post-tax Sharpe >= 0.30,0.36864493440434637,0.3,True,True
+Tax model matters: |Sharpe haircut| > 20%,0.33493206537328774,0.2,True,False

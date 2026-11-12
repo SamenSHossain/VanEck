@@ -1,0 +1,405 @@
+{
+  "run_id": "20261108T205150Z-cdc0ec",
+  "created_utc": "2026-11-08T20:51:50Z",
+  "strategy": "EqualWeight",
+  "status": "submitted",
+  "signal_date": "2023-12-29",
+  "exec_date": "2024-01-02",
+  "regime": "Bull",
+  "equity": 10000000.0,
+  "cash": 10000000.0,
+  "policy": null,
+  "current_weights": {
+    "ANGL": 0.110317,
+    "FLTR": 0.110318,
+    "GDX": 0.110316,
+    "HAP": 0.013602,
+    "MOAT": 0.110312,
+    "OUNZ": 0.110318,
+    "PFXF": 0.080498,
+    "REMX": 0.067742,
+    "SMH": 0.110309,
+    "CASH": 0.176269
+  },
+  "targets": {
+    "SMH": 0.111111,
+    "MOAT": 0.111111,
+    "GDX": 0.111111,
+    "ANGL": 0.111111,
+    "REMX": 0.111111,
+    "HAP": 0.111111,
+    "FLTR": 0.111111,
+    "PFXF": 0.111111,
+    "OUNZ": 0.111111
+  },
+  "executed_weights": {
+    "ANGL": 0.110678,
+    "FLTR": 0.111115,
+    "GDX": 0.109413,
+    "HAP": 0.01367,
+    "MOAT": 0.110706,
+    "OUNZ": 0.110804,
+    "PFXF": 0.081109,
+    "REMX": 0.067834,
+    "SMH": 0.107271
+  },
+  "health": {
+    "as_of": "2023-12-29",
+    "status": "ok",
+    "checks": [
+      {
+        "name": "last_bar_alignment",
+        "status": "ok",
+        "value": 0,
+        "limit": 0,
+        "detail": "all tickers priced on the latest bar"
+      },
+      {
+        "name": "recent_nans",
+        "status": "ok",
+        "value": 0,
+        "limit": 0,
+        "detail": ""
+      },
+      {
+        "name": "price_jump",
+        "status": "ok",
+        "value": 0.0253,
+        "limit": 0.25,
+        "detail": ""
+      },
+      {
+        "name": "zero_volume_last_bar",
+        "status": "ok",
+        "value": 0,
+        "limit": 0,
+        "detail": ""
+      },
+      {
+        "name": "adjustment_breaks",
+        "status": "ok",
+        "value": 0,
+        "limit": 0,
+        "detail": ""
+      },
+      {
+        "name": "macro_sanity",
+        "status": "ok",
+        "value": "ok",
+        "limit": "",
+        "detail": ""
+      },
+      {
+        "name": "bar_staleness_days",
+        "status": "ok",
+        "value": 4,
+        "limit": 5,
+        "detail": "last bar 2023-12-29, now 2024-01-02"
+      },
+      {
+        "name": "cache_age_days",
+        "status": "ok",
+        "value": 0.0,
+        "limit": 3,
+        "detail": "fetched 2026-11-08 20:37Z"
+      },
+      {
+        "name": "signal_history",
+        "status": "ok",
+        "value": 0,
+        "limit": 0,
+        "detail": ""
+      }
+    ]
+  },
+  "risk": {
+    "status": "warn",
+    "halted": false,
+    "checks": [
+      {
+        "name": "long_only",
+        "status": "pass",
+        "value": 0,
+        "limit": 0,
+        "detail": ""
+      },
+      {
+        "name": "max_weight",
+        "status": "pass",
+        "value": 0.1111,
+        "limit": 0.15,
+        "detail": "SMH"
+      },
+      {
+        "name": "gross_exposure",
+        "status": "pass",
+        "value": 1.0,
+        "limit": 1.0,
+        "detail": ""
+      },
+      {
+        "name": "signal_staleness_days",
+        "status": "pass",
+        "value": 4,
+        "limit": 5,
+        "detail": ""
+      },
+      {
+        "name": "drawdown_halt",
+        "status": "pass",
+        "value": 0.0,
+        "limit": -0.25,
+        "detail": ""
+      },
+      {
+        "name": "participation",
+        "status": "warn",
+        "value": 3,
+        "limit": 0.1,
+        "detail": "scaled: HAP, PFXF, REMX"
+      },
+      {
+        "name": "turnover_one_way",
+        "status": "pass",
+        "value": 0.4144,
+        "limit": 0.75,
+        "detail": ""
+      },
+      {
+        "name": "cash_after_trades",
+        "status": "pass",
+        "value": 1706598.29,
+        "limit": 0.0,
+        "detail": "estimated costs 5,203"
+      }
+    ],
+    "orders": [
+      {
+        "ticker": "ANGL",
+        "side": "BUY",
+        "shares": 38568,
+        "price": 28.780001,
+        "adv": 46218937.96080833,
+        "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 1109987.08,
+        "participation": 0.024
+      },
+      {
+        "ticker": "FLTR",
+        "side": "BUY",
+        "shares": 44135,
+        "price": 25.15,
+        "adv": 13850940.869188335,
+        "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 1109995.25,
+        "participation": 0.0801
+      },
+      {
+        "ticker": "GDX",
+        "side": "BUY",
+        "shares": 35794,
+        "price": 31.01,
+        "adv": 712698610.7570599,
+        "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 1109971.94,
+        "participation": 0.0016
+      },
+      {
+        "ticker": "HAP",
+        "side": "BUY",
+        "shares": 2804,
+        "price": 48.810001,
+        "adv": 1369114.5678666667,
+        "note": "scaled from 22741 to 2804 shares (participation 81.1% > 10%)",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 136863.24,
+        "participation": 0.1
+      },
+      {
+        "ticker": "MOAT",
+        "side": "BUY",
+        "shares": 13078,
+        "price": 84.870003,
+        "adv": 86841167.18337665,
+        "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 1109929.9,
+        "participation": 0.0128
+      },
+      {
+        "ticker": "OUNZ",
+        "side": "BUY",
+        "shares": 55611,
+        "price": 19.959999,
+        "adv": 22243584.752576668,
+        "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 1109995.5,
+        "participation": 0.0499
+      },
+      {
+        "ticker": "PFXF",
+        "side": "BUY",
+        "shares": 47145,
+        "price": 17.18,
+        "adv": 8099642.805061666,
+        "note": "scaled from 64610 to 47145 shares (participation 13.7% > 10%)",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 809951.1,
+        "participation": 0.1
+      },
+      {
+        "ticker": "REMX",
+        "side": "BUY",
+        "shares": 11074,
+        "price": 61.549999,
+        "adv": 6816064.366868333,
+        "note": "scaled from 18034 to 11074 shares (participation 16.3% > 10%)",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 681604.69,
+        "participation": 0.1
+      },
+      {
+        "ticker": "SMH",
+        "side": "BUY",
+        "shares": 6347,
+        "price": 174.869995,
+        "adv": 1264661182.232025,
+        "note": "",
+        "reason": "rebalance",
+        "lot_plan": null,
+        "notional": 1109899.86,
+        "participation": 0.0009
+      }
+    ],
+    "dropped": []
+  },
+  "fills": [
+    {
+      "date": "2024-01-02",
+      "ticker": "ANGL",
+      "side": "BUY",
+      "shares": 38568,
+      "price": 28.690001,
+      "notional": 1106515.958568,
+      "cost": 608.5847772124
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "FLTR",
+      "side": "BUY",
+      "shares": 44135,
+      "price": 25.17,
+      "notional": 1110877.9500000002,
+      "cost": 610.9838725000001
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "GDX",
+      "side": "BUY",
+      "shares": 35794,
+      "price": 30.559999,
+      "notional": 1093864.604206,
+      "cost": 164.0806906309
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "HAP",
+      "side": "BUY",
+      "shares": 2804,
+      "price": 48.740002,
+      "notional": 136666.965608,
+      "cost": 143.5013138884
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "MOAT",
+      "side": "BUY",
+      "shares": 13078,
+      "price": 84.629997,
+      "notional": 1106791.100766,
+      "cost": 608.7361054213001
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "OUNZ",
+      "side": "BUY",
+      "shares": 55611,
+      "price": 19.92,
+      "notional": 1107771.12,
+      "cost": 609.275116
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "PFXF",
+      "side": "BUY",
+      "shares": 47145,
+      "price": 17.200001,
+      "notional": 810894.047145,
+      "cost": 851.4397495022499
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "REMX",
+      "side": "BUY",
+      "shares": 11074,
+      "price": 61.240002,
+      "notional": 678171.782148,
+      "cost": 712.0813712553999
+    },
+    {
+      "date": "2024-01-02",
+      "ticker": "SMH",
+      "side": "BUY",
+      "shares": 6347,
+      "price": 168.970001,
+      "notional": 1072452.596347,
+      "cost": 160.86888945205
+    }
+  ],
+  "notes": [
+    "9 fills at the 2024-01-02 close"
+  ],
+  "manifest": {
+    "run_id": "20261108T205150Z-cdc0ec",
+    "created_utc": "2026-11-08T20:51:50Z",
+    "command": "rebalance",
+    "argv": [
+      "replay",
+      "--strategy",
+      "EqualWeight",
+      "--start",
+      "2024-01-01",
+      "--end",
+      "2024-12-31"
+    ],
+    "git": {
+      "sha": "5c1d3be649e31a0a5557287ab772e129e1a4f497",
+      "dirty": true,
+      "branch": "claude/dazzling-dirac-6vvbh2"
+    },
+    "config_hash": "e691fafac8d70a1e",
+    "data_hash": "ab858d0ef71cb3ad",
+    "versions": {
+      "python": "3.13.18",
+      "numpy": "2.5.3",
+      "pandas": "3.0.5",
+      "scipy": "1.18.1",
+      "yfinance": "1.8.0",
+      "matplotlib": "3.11.2"
+    },
+    "dry_run": false,
+    "force": false
+  }
+}

@@ -1,0 +1,4 @@
+{"halted": true, "reason": "demo", "by": "bob", "at": "2026-11-08T21:53:01Z"}
+{"halted": false, "reason": "demo over", "by": "bob", "at": "2026-11-08T21:53:04Z"}
+{"halted": true, "reason": "demo", "by": "bob", "at": "2026-11-08T21:55:59Z"}
+{"halted": false, "reason": "demo over", "by": "bob", "at": "2026-11-08T21:56:02Z"}

@@ -1,0 +1,12 @@
+| 2026-11-08T20:51:50Z | EqualWeight | 2023-12-29 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205150Z-cdc0ec |
+| 2026-11-08T20:51:50Z | EqualWeight | 2024-01-31 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205150Z-149f53 |
+| 2026-11-08T20:51:50Z | EqualWeight | 2024-02-29 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205150Z-8a03fd |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-03-28 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-8284da |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-04-30 | Correction | submitted | ok | warn | 8 orders | 8 fills | 20261108T205151Z-f7b1bc |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-05-31 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-8c40a3 |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-06-28 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-e8bb95 |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-07-31 | Neutral | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-87b13e |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-08-30 | Neutral | submitted | ok | warn | 8 orders | 8 fills | 20261108T205151Z-330149 |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-09-30 | Neutral | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-5e4d15 |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-10-31 | Neutral | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-569f4b |
+| 2026-11-08T20:51:51Z | EqualWeight | 2024-11-29 | Bull | submitted | ok | warn | 9 orders | 9 fills | 20261108T205151Z-553396 |
