@@ -9,7 +9,7 @@ Window 2017-06-01 to 2024-12-31; rules in docs/SPEC.md sections 14-16. Narrative
 | policy | ew_sharpe_post | benchmark_sharpe_post | margin | threshold | gate1_pass |
 |---|---|---|---|---|---|
 | P0 calendar, FIFO | 0.369 | 0.298 | 0.071 | 0.200 | no |
-| P1 TAXOPT lots | 0.411 | 0.339 | 0.072 | 0.200 | no |
+| P1 TAXOPT lots | 0.410 | 0.339 | 0.072 | 0.200 | no |
 | P2 + drift band 20% | 0.443 | 0.360 | 0.083 | 0.200 | no |
 | P3 + loss harvesting | 0.440 | 0.403 | 0.038 | 0.200 | no |
 
@@ -18,21 +18,21 @@ Policy ladder (pre- and post-tax, same OOS window; tracking error is against the
 | portfolio | policy | cagr_pre | cagr_post | sharpe_pre | sharpe_post | mdd_post | turnover_pre | cost_bps_yr | tax_pct_yr | harvests | tracking_error_vs_p0_pre | sharpe_post_gain_vs_p0 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Equal weight | P0 calendar, FIFO | 9.9% | 6.9% | 0.554 | 0.369 | -28.6% | 20.9% | 3.932 | 2.544 | 0 | 0.0% | 0.000 |
-| Equal weight | P1 TAXOPT lots | 9.9% | 7.5% | 0.554 | 0.411 | -28.6% | 20.9% | 3.932 | 1.849 | 0 | 0.0% | 0.042 |
+| Equal weight | P1 TAXOPT lots | 9.9% | 7.5% | 0.554 | 0.410 | -28.6% | 20.9% | 3.932 | 1.854 | 0 | 0.0% | 0.042 |
 | Equal weight | P2 + drift band 20% | 9.7% | 8.0% | 0.546 | 0.443 | -27.9% | 5.5% | 1.773 | 1.530 | 0 | 0.7% | 0.075 |
 | Equal weight | P3 + loss harvesting | 9.4% | 8.0% | 0.533 | 0.440 | -28.6% | 30.9% | 4.931 | 0.990 | 40 | 1.4% | 0.072 |
 | 60/40 VanEck | P0 calendar, FIFO | 8.4% | 5.6% | 0.489 | 0.298 | -25.3% | 22.2% | 2.909 | 2.489 | 0 | 0.0% | 0.000 |
-| 60/40 VanEck | P1 TAXOPT lots | 8.4% | 6.2% | 0.489 | 0.339 | -23.8% | 22.2% | 2.909 | 1.829 | 0 | 0.0% | 0.041 |
+| 60/40 VanEck | P1 TAXOPT lots | 8.4% | 6.2% | 0.489 | 0.339 | -23.8% | 22.2% | 2.909 | 1.832 | 0 | 0.0% | 0.040 |
 | 60/40 VanEck | P2 + drift band 20% | 8.5% | 6.4% | 0.500 | 0.360 | -23.9% | 6.8% | 1.375 | 1.554 | 0 | 0.8% | 0.062 |
 | 60/40 VanEck | P3 + loss harvesting | 7.8% | 7.0% | 0.452 | 0.403 | -23.1% | 32.6% | 3.996 | 1.048 | 30 | 1.5% | 0.105 |
 | 60/40 SPY/BND | P0 calendar, FIFO | 9.2% | 7.4% | 0.617 | 0.477 | -22.1% | 10.7% | 0.563 | 1.343 | 0 | 0.0% | 0.000 |
 | 60/40 SPY/BND | P1 TAXOPT lots | 9.2% | 7.7% | 0.617 | 0.502 | -21.7% | 10.7% | 0.563 | 1.074 | 0 | 0.0% | 0.025 |
 | 60/40 SPY/BND | P2 + drift band 20% | 9.5% | 8.2% | 0.625 | 0.508 | -23.3% | 1.6% | 0.255 | 0.923 | 0 | 0.8% | 0.031 |
 | 60/40 SPY/BND | P3 + loss harvesting | 9.5% | 8.4% | 0.625 | 0.532 | -23.3% | 13.8% | 0.715 | 0.914 | 5 | 0.8% | 0.054 |
-| Drift x MinVar | P0 calendar, FIFO | 11.0% | 6.8% | 0.652 | 0.374 | -27.3% | 106.0% | 16.876 | 3.334 | 0 | 0.0% | 0.000 |
-| Drift x MinVar | P1 TAXOPT lots | 11.0% | 7.1% | 0.652 | 0.394 | -27.4% | 106.0% | 16.876 | 2.963 | 0 | 0.0% | 0.020 |
-| Drift x MinVar | P2 + drift band 20% | 10.7% | 7.1% | 0.636 | 0.394 | -27.4% | 90.7% | 14.548 | 2.751 | 0 | 0.5% | 0.020 |
-| Drift x MinVar | P3 + loss harvesting | 9.6% | 7.4% | 0.569 | 0.410 | -27.5% | 135.0% | 17.488 | 2.660 | 63 | 2.5% | 0.036 |
+| Drift x MinVar | P0 calendar, FIFO | 11.0% | 6.8% | 0.652 | 0.373 | -27.3% | 106.0% | 16.876 | 3.349 | 0 | 0.0% | 0.000 |
+| Drift x MinVar | P1 TAXOPT lots | 11.0% | 7.1% | 0.652 | 0.393 | -27.4% | 106.0% | 16.876 | 2.972 | 0 | 0.0% | 0.021 |
+| Drift x MinVar | P2 + drift band 20% | 10.7% | 7.1% | 0.636 | 0.394 | -27.4% | 90.7% | 14.548 | 2.754 | 0 | 0.5% | 0.021 |
+| Drift x MinVar | P3 + loss harvesting | 9.6% | 7.4% | 0.569 | 0.410 | -27.5% | 135.0% | 17.488 | 2.660 | 63 | 2.5% | 0.037 |
 
 Sensitivities:
 
@@ -59,14 +59,14 @@ Benchmark 60/40 VanEck (60% EW equity funds / 40% BND); months 2017-07-31 to 202
 | NonexMaxSharpe+Regime | primary | 7 | -3.3% | 6.4% | 10.4% | 6.8% | None | 11.2% | 8.6% |
 | MomentumxMinVar+Regime | primary | 7 | -3.3% | 6.5% | 10.6% | 7.0% | None | 11.2% | 8.5% |
 | MomentumxMaxSharpe+Regime | primary | 7 | -3.4% | 6.4% | 10.4% | 6.8% | None | 11.2% | 8.5% |
-| DriftxMinVar+Regime | primary | 7 | -1.4% | 6.7% | 10.9% | 7.2% | None | 10.5% | 8.0% |
+| DriftxMinVar+Regime | primary | 7 | -1.5% | 6.7% | 10.9% | 7.2% | None | 10.5% | 8.0% |
 | DriftxMaxSharpe+Regime | primary | 7 | -1.6% | 6.7% | 10.8% | 7.1% | None | 10.4% | 7.9% |
 | NonexMinVar | diagnostic | 7 | -0.0% | 5.5% | 9.0% | 5.9% | None | 6.4% | 4.9% |
 | NonexMaxSharpe | diagnostic | 7 | -1.2% | 4.1% | 6.6% | 4.3% | None | 6.8% | 5.2% |
 | MomentumxMinVar | diagnostic | 7 | -0.6% | 3.6% | 5.8% | 3.8% | None | 6.1% | 4.6% |
-| MomentumxMaxSharpe | diagnostic | 7 | -0.6% | 3.2% | 5.2% | 3.4% | None | 6.2% | 4.8% |
-| DriftxMinVar | diagnostic | 7 | 1.4% | 4.0% | 6.5% | 4.3% | 83 | 4.0% | 3.0% |
-| DriftxMaxSharpe | diagnostic | 7 | 1.5% | 3.5% | 5.7% | 3.7% | 64 | 4.0% | 3.1% |
+| MomentumxMaxSharpe | diagnostic | 7 | -0.7% | 3.2% | 5.3% | 3.5% | None | 6.2% | 4.8% |
+| DriftxMinVar | diagnostic | 7 | 1.4% | 4.0% | 6.5% | 4.2% | 85 | 4.0% | 3.0% |
+| DriftxMaxSharpe | diagnostic | 7 | 1.4% | 3.5% | 5.6% | 3.7% | 65 | 4.0% | 3.1% |
 
 ### B. Monthly paired test with Newey-West standard errors
 
@@ -76,14 +76,14 @@ Benchmark 60/40 VanEck (60% EW equity funds / 40% BND); months 2017-07-31 to 202
 | NonexMaxSharpe+Regime | primary | -3.0% | 2.8% | 3 | -1.085 | 0.860 | 0.811 |
 | MomentumxMinVar+Regime | primary | -2.8% | 2.7% | 3 | -1.053 | 0.852 | 0.795 |
 | MomentumxMaxSharpe+Regime | primary | -3.0% | 2.7% | 3 | -1.122 | 0.868 | 0.808 |
-| DriftxMinVar+Regime | primary | -1.6% | 2.7% | 3 | -0.577 | 0.717 | 0.687 |
-| DriftxMaxSharpe+Regime | primary | -1.7% | 2.6% | 3 | -0.628 | 0.734 | 0.700 |
+| DriftxMinVar+Regime | primary | -1.6% | 2.7% | 3 | -0.579 | 0.718 | 0.687 |
+| DriftxMaxSharpe+Regime | primary | -1.7% | 2.6% | 3 | -0.631 | 0.735 | 0.701 |
 | NonexMinVar | diagnostic | -0.8% | 1.6% | 3 | -0.525 | 0.699 | 0.667 |
-| NonexMaxSharpe | diagnostic | -1.0% | 1.6% | 3 | -0.644 | 0.739 | 0.694 |
-| MomentumxMinVar | diagnostic | -0.2% | 1.6% | 3 | -0.150 | 0.559 | 0.551 |
-| MomentumxMaxSharpe | diagnostic | -0.3% | 1.7% | 3 | -0.167 | 0.566 | 0.558 |
-| DriftxMinVar | diagnostic | 1.2% | 1.1% | 3 | 1.084 | 0.141 | 0.159 |
-| DriftxMaxSharpe | diagnostic | 1.3% | 1.1% | 3 | 1.153 | 0.126 | 0.149 |
+| NonexMaxSharpe | diagnostic | -1.0% | 1.6% | 3 | -0.645 | 0.740 | 0.694 |
+| MomentumxMinVar | diagnostic | -0.3% | 1.6% | 3 | -0.159 | 0.563 | 0.555 |
+| MomentumxMaxSharpe | diagnostic | -0.3% | 1.7% | 3 | -0.177 | 0.570 | 0.561 |
+| DriftxMinVar | diagnostic | 1.2% | 1.1% | 3 | 1.072 | 0.143 | 0.162 |
+| DriftxMaxSharpe | diagnostic | 1.3% | 1.1% | 3 | 1.139 | 0.129 | 0.152 |
 
 ### C. Probabilistic and deflated Sharpe ratios (monthly excess returns over cash)
 
@@ -92,28 +92,28 @@ Primary family, N = 6 trials:
 |  | sr_annualised | skew | kurt | psr_vs_zero | sr0_expected_max | deflated_sr |
 |---|---|---|---|---|---|---|
 | NonexMinVar+Regime | 0.217 | 0.850 | 4.453 | 0.727 | 0.024 | 0.644 |
-| NonexMaxSharpe+Regime | 0.119 | 0.242 | 3.115 | 0.627 | 0.024 | 0.537 |
-| MomentumxMinVar+Regime | 0.131 | 0.187 | 2.748 | 0.640 | 0.024 | 0.550 |
+| NonexMaxSharpe+Regime | 0.119 | 0.242 | 3.115 | 0.627 | 0.024 | 0.538 |
+| MomentumxMinVar+Regime | 0.131 | 0.187 | 2.748 | 0.640 | 0.024 | 0.551 |
 | MomentumxMaxSharpe+Regime | 0.116 | 0.163 | 2.759 | 0.625 | 0.024 | 0.535 |
-| DriftxMinVar+Regime | 0.255 | 0.335 | 2.870 | 0.758 | 0.024 | 0.680 |
-| DriftxMaxSharpe+Regime | 0.243 | 0.311 | 2.854 | 0.748 | 0.024 | 0.668 |
+| DriftxMinVar+Regime | 0.254 | 0.335 | 2.870 | 0.758 | 0.024 | 0.680 |
+| DriftxMaxSharpe+Regime | 0.242 | 0.311 | 2.855 | 0.747 | 0.024 | 0.668 |
 
 All 12 (with the edge series versus 60/40):
 
 |  | sr_annualised | skew | kurt | psr_vs_zero | sr0_expected_max | deflated_sr | edge_sr_annualised | psr_edge_vs_zero |
 |---|---|---|---|---|---|---|---|---|
-| NonexMinVar+Regime | 0.217 | 0.850 | 4.453 | 0.727 | 0.046 | 0.562 | -0.266 | 0.229 |
-| NonexMaxSharpe+Regime | 0.119 | 0.242 | 3.115 | 0.627 | 0.046 | 0.454 | -0.323 | 0.182 |
-| MomentumxMinVar+Regime | 0.131 | 0.187 | 2.748 | 0.640 | 0.046 | 0.467 | -0.302 | 0.198 |
-| MomentumxMaxSharpe+Regime | 0.116 | 0.163 | 2.759 | 0.625 | 0.046 | 0.452 | -0.319 | 0.184 |
-| DriftxMinVar+Regime | 0.255 | 0.335 | 2.870 | 0.758 | 0.046 | 0.602 | -0.178 | 0.308 |
-| DriftxMaxSharpe+Regime | 0.243 | 0.311 | 2.854 | 0.748 | 0.046 | 0.589 | -0.192 | 0.294 |
-| NonexMinVar | 0.331 | -0.049 | 5.010 | 0.814 | 0.046 | 0.677 | -0.158 | 0.333 |
-| NonexMaxSharpe | 0.254 | 0.023 | 3.148 | 0.755 | 0.046 | 0.600 | -0.185 | 0.305 |
-| MomentumxMinVar | 0.296 | -0.044 | 2.656 | 0.789 | 0.046 | 0.643 | -0.047 | 0.449 |
-| MomentumxMaxSharpe | 0.290 | -0.042 | 2.637 | 0.785 | 0.046 | 0.638 | -0.053 | 0.442 |
-| DriftxMinVar | 0.394 | 0.129 | 3.720 | 0.859 | 0.046 | 0.738 | 0.367 | 0.845 |
-| DriftxMaxSharpe | 0.396 | 0.084 | 3.617 | 0.860 | 0.046 | 0.739 | 0.383 | 0.851 |
+| NonexMinVar+Regime | 0.217 | 0.850 | 4.453 | 0.727 | 0.046 | 0.563 | -0.266 | 0.229 |
+| NonexMaxSharpe+Regime | 0.119 | 0.242 | 3.115 | 0.627 | 0.046 | 0.455 | -0.323 | 0.182 |
+| MomentumxMinVar+Regime | 0.131 | 0.187 | 2.748 | 0.640 | 0.046 | 0.468 | -0.302 | 0.198 |
+| MomentumxMaxSharpe+Regime | 0.116 | 0.163 | 2.759 | 0.625 | 0.046 | 0.453 | -0.319 | 0.184 |
+| DriftxMinVar+Regime | 0.254 | 0.335 | 2.870 | 0.758 | 0.046 | 0.602 | -0.179 | 0.308 |
+| DriftxMaxSharpe+Regime | 0.242 | 0.311 | 2.855 | 0.747 | 0.046 | 0.589 | -0.193 | 0.293 |
+| NonexMinVar | 0.331 | -0.049 | 5.010 | 0.814 | 0.046 | 0.678 | -0.158 | 0.333 |
+| NonexMaxSharpe | 0.254 | 0.023 | 3.147 | 0.755 | 0.046 | 0.600 | -0.186 | 0.305 |
+| MomentumxMinVar | 0.295 | -0.042 | 2.655 | 0.788 | 0.046 | 0.643 | -0.050 | 0.445 |
+| MomentumxMaxSharpe | 0.289 | -0.040 | 2.636 | 0.784 | 0.046 | 0.637 | -0.057 | 0.439 |
+| DriftxMinVar | 0.392 | 0.130 | 3.718 | 0.858 | 0.046 | 0.737 | 0.361 | 0.842 |
+| DriftxMaxSharpe | 0.395 | 0.085 | 3.616 | 0.859 | 0.046 | 0.739 | 0.377 | 0.848 |
 
 ### D. Romano-Wolf stepdown (one-sided, alpha 0.05)
 
@@ -121,25 +121,25 @@ Primary family: White reality-check p = 0.809
 
 |  | mean_diff | t | p_raw_bootstrap | p_adjusted_stepdown | reject_at_alpha |
 |---|---|---|---|---|---|
-| DriftxMinVar+Regime | -0.1% | -0.488 | 0.720 | 0.809 | no |
-| DriftxMaxSharpe+Regime | -0.1% | -0.526 | 0.743 | 0.820 | no |
+| DriftxMinVar+Regime | -0.1% | -0.490 | 0.720 | 0.809 | no |
+| DriftxMaxSharpe+Regime | -0.1% | -0.528 | 0.743 | 0.822 | no |
 | NonexMinVar+Regime | -0.2% | -0.727 | 0.790 | 0.877 | no |
 | MomentumxMinVar+Regime | -0.2% | -0.827 | 0.870 | 0.886 | no |
 | MomentumxMaxSharpe+Regime | -0.2% | -0.874 | 0.887 | 0.895 | no |
 | NonexMaxSharpe+Regime | -0.3% | -0.885 | 0.868 | 0.895 | no |
 
-All 12: White reality-check p = 0.348
+All 12: White reality-check p = 0.359
 
 |  | mean_diff | t | p_raw_bootstrap | p_adjusted_stepdown | reject_at_alpha |
 |---|---|---|---|---|---|
-| DriftxMaxSharpe | 0.1% | 1.048 | 0.119 | 0.348 | no |
-| DriftxMinVar | 0.1% | 1.005 | 0.132 | 0.360 | no |
-| MomentumxMinVar | -0.0% | -0.130 | 0.578 | 0.896 | no |
-| MomentumxMaxSharpe | -0.0% | -0.146 | 0.591 | 0.899 | no |
+| DriftxMaxSharpe | 0.1% | 1.032 | 0.120 | 0.359 | no |
+| DriftxMinVar | 0.1% | 0.990 | 0.133 | 0.366 | no |
+| MomentumxMinVar | -0.0% | -0.138 | 0.584 | 0.898 | no |
+| MomentumxMaxSharpe | -0.0% | -0.155 | 0.597 | 0.901 | no |
 | NonexMinVar | -0.1% | -0.433 | 0.703 | 0.902 | no |
-| DriftxMinVar+Regime | -0.1% | -0.488 | 0.720 | 0.902 | no |
-| NonexMaxSharpe | -0.1% | -0.508 | 0.776 | 0.902 | no |
-| DriftxMaxSharpe+Regime | -0.1% | -0.526 | 0.743 | 0.902 | no |
+| DriftxMinVar+Regime | -0.1% | -0.490 | 0.720 | 0.902 | no |
+| NonexMaxSharpe | -0.1% | -0.509 | 0.776 | 0.902 | no |
+| DriftxMaxSharpe+Regime | -0.1% | -0.528 | 0.743 | 0.902 | no |
 | NonexMinVar+Regime | -0.2% | -0.727 | 0.790 | 0.902 | no |
 | MomentumxMinVar+Regime | -0.2% | -0.827 | 0.870 | 0.902 | no |
 | MomentumxMaxSharpe+Regime | -0.2% | -0.874 | 0.887 | 0.902 | no |

@@ -1,13 +1,13 @@
 {
-  "run_id": "20261110T200042Z-574bd9",
-  "created_utc": "2026-11-10T20:00:42Z",
+  "run_id": "20261113T005351Z-b16301",
+  "created_utc": "2026-11-13T00:53:51Z",
   "command": "all",
   "argv": [
     "all",
     "--force"
   ],
   "git": {
-    "sha": "bd4061f37718ae8ca09fc469da4159ba9acda29f",
+    "sha": "2c57635d25d18d605a0b56fd4e8895e3a5259063",
     "dirty": true,
     "dirty_code": false,
     "branch": "claude/dazzling-dirac-6vvbh2"
