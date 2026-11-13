@@ -1,9 +1,10 @@
 # Operations runbook
 
 How the package is run as a system rather than as a one-off study. The design
-follows three principles: every decision is recorded before it is acted on, no
-decision is taken on unchecked data, and the paper book is reconciled against
-the research engine so the two cannot silently diverge.
+follows three principles: a monthly order goes out only if it matches a dry-run
+decision that was recorded and approved, no decision is taken on unchecked
+data, and the paper book is reconciled against the research engine so the two
+cannot silently diverge. Every call writes a decision record.
 
 ## The monthly cycle
 
@@ -13,12 +14,26 @@ the research engine so the two cannot silently diverge.
 | 2. Health gate | `python -m vaneck check` | exit code 2 blocks the cycle |
 | 3. Dry-run decision on the signal date | `python -m vaneck rebalance --strategy EqualWeight` | records a `dry_run` decision |
 | 4. Human review of the decision record | open `paper/decisions/<signal>_<strategy>_dry_run.json` | targets, orders, risk checks, regime |
-| 5. Execute after the first trading day's close | `python -m vaneck rebalance --strategy EqualWeight --submit` | refuses duplicates for the same signal date |
-| 6. Monitor | `python -m vaneck monitor --strategy EqualWeight --mark` | exit code 1 on any alert |
+| 5. Approve the reviewed dry run | `python -m vaneck approve <run_id> --by NAME` | records a hash of the decision |
+| 6. Execute after the first trading day's close | `python -m vaneck fetch --force`, then `python -m vaneck rebalance --strategy EqualWeight --as-of <signal date> --submit` | refuses `unapproved` (no approval, or the orders changed since it was given) and `duplicate` (already submitted for that signal date) |
+| 7. Monitor | `python -m vaneck monitor --strategy EqualWeight --mark` | exit code 1 on any alert |
 
-Steps 1 to 3 and 6 are automated by `.github/workflows/monthly.yml`, which
-uploads the health report, the dry-run decision and the monitor report as
-artifacts. Nothing is executed automatically; step 5 is a human action.
+In step 6, `--as-of` keeps the signal on the reviewed date: after the refresh
+the newest bar is the execution day, and without it the pipeline would form a
+new decision for that day, which has no approval. Before the refresh the
+execution day's close is missing and the decision ends `awaiting_exec_bar`.
+
+Steps 1 to 3 are automated by `.github/workflows/monthly.yml`, which uploads
+the health report and the dry-run decision as artifacts. Nothing is executed
+automatically; steps 4 to 6 are human actions.
+
+While the 2025+ hold-out is sealed (SPEC section 19), the committed paper book
+is the 2024 rehearsal, and a decision or `monitor --mark` on it would roll it
+through the sealed period. The scheduled job therefore makes its dry run on a
+fresh book under `/tmp/monthly`, as of the last trading day of the previous
+month, and runs step 7 only once `reports/holdout/unsealed.json` exists. By
+hand, do the same: pass `--book` and `--decisions` pointing at a fresh location
+(`make rebalance` and `make replay` do), and run `monitor` without `--mark`.
 
 ## Decision records
 
@@ -31,10 +46,12 @@ and appends a line to `paper/decisions/log.md`. A record carries:
 - the full health report and risk report that justified the status;
 - the run manifest: git commit, dirty flag, configuration hash, data hash, package versions.
 
-Statuses: `dry_run`, `submitted`, `blocked` (health or risk), `duplicate`
-(already submitted for that signal date; override with `--force`), and
-`awaiting_exec_bar` (submission requested before the execution day's close is
-in the data).
+Statuses: `dry_run`, `submitted`, `blocked` (health, risk or a venue
+reconciliation break), `duplicate` (already submitted for that signal date;
+override with `--force`), `halted` (global halt flag set), `retired`
+(retirement flag set and no sell orders left), `unapproved` (no approval, or
+the orders changed since it was given), and `awaiting_exec_bar` (submission
+requested before the execution day's close is in the data).
 
 ## Risk controls (`vaneck/risk.py`)
 
@@ -49,10 +66,11 @@ in the data).
 | cash after trades and estimated costs | >= 0 | block |
 | signal staleness | 5 calendar days | block |
 | drawdown halt | -25% from the book's peak | remove buys, keep sells, warn |
-| cost reserve | 10 bps of equity held back from targets | - |
+| cost reserve | 10 bps of equity held back from targets (with `--policy`, 10 bps of the cash balance) | - |
 
-The participation limit is the one that binds in practice: at $10M, equal
-weight in HAP is about 65% of a day's volume, so the book carries a persistent
+The participation limit is the one that binds in practice: at $10M, the
+rehearsal's first equal-weight order for HAP was 81% of its trailing 60-day
+dollar volume, eight times the 10% cap, so the book carries a persistent
 underweight that the monitor reports as an implementation gap.
 
 ## Health checks (`vaneck/health.py`)
@@ -83,8 +101,9 @@ out completely, and it survives a reload of the book.
   a larger gap is an engine or data problem and raises an alert.
 - **Implementation gap.** The simulator is fed the intended targets, once
   without and once with the live participation cap. The uncapped difference is
-  the cost of the risk controls; the capped difference should be whole-share
-  rounding and dividends held as cash (about -0.1% in the 2024 rehearsal).
+  the cost of the risk controls; the capped difference should be small, from
+  whole-share rounding, dividends held as cash, the cost reserve and the
+  minimum order (-0.13% in the 2024 rehearsal, not decomposed further).
 - **Book hygiene.** Current drawdown versus the halt level, blocked decisions,
   rebalances where orders were scaled, and days since the last decision.
 
@@ -100,11 +119,15 @@ cycle over a past window as an operational rehearsal.
 
 ## Connecting a real broker
 
-Implement the `Broker` protocol (`positions`, `cash`, `equity`, `submit`)
-against the broker's API and pass it to `live.rebalance`. Reconcile positions
-against the broker before every decision, set the lot-relief method (HIFO or
-specific identification) at the broker, and keep the paper book running in
-parallel as the control. Nothing in this repository talks to a real broker.
+Wrap the broker's API the way `vaneck/alpaca.py` does (`positions`, `cash`,
+`equity`, `submit` with a run id) and pass it to `live.rebalance` inside
+`LiveBroker`, which keeps the local paper book as the shadow ledger and
+supplies the rest of what the pipeline calls. Reconcile positions against the
+broker before every decision, set the lot-relief method (HIFO or specific
+identification) at the broker, and keep the paper book running in parallel as
+the control. The only broker connection in this repository is the Alpaca
+adapter described under Connecting a venue; it uses Alpaca's paper endpoint
+unless `APCA_API_BASE_URL` points elsewhere.
 
 ## What is deliberately not here
 
@@ -119,8 +142,10 @@ parallel as the control. Nothing in this repository talks to a real broker.
 3-month bill, S&P 500) into `data/secondary/`. `python -m vaneck check --cross`
 adds three layers to the health gate:
 
-- **FRED agreement** for every macro input: block if the last common day
-  disagrees beyond tolerance, warn if more than 1% of days do.
+- **FRED agreement** for the four macro inputs FRED publishes (VIX, 10-year
+  yield, 3-month bill, S&P 500; the S&P GSCI has no FRED counterpart): block
+  if the last common day disagrees beyond tolerance or more than 5% of days
+  do, warn if more than 1% of days do.
 - **Peer divergence**: each fund's daily returns against its cached substitute
   (SMH/SOXX, GDX/RING, ...). A one-day gap above 10% warns, above 25% blocks;
   correlation is checked only for pairs that move at least 0.3% a day.
@@ -154,8 +179,9 @@ NPY_DISABLE_CPU_FEATURES="X86_V4 AVX512_ICL AVX512_SPR" OPENBLAS_CORETYPE=Haswel
 NPY_DISABLE_CPU_FEATURES="X86_V3 X86_V4 AVX512_ICL AVX512_SPR" OPENBLAS_CORETYPE=Nehalem python -m vaneck golden
 ```
 
-Both must print `golden check: OK`. Agreement is within 4e-7 relative, set by
-the MaxSharpe optimizer's stopping tolerance; the check allows 1e-6. A
+Both must print `golden check: OK`. Agreement is within 4e-7 relative, with
+the largest differences on the MaxSharpe strategies (most likely the
+optimizer's stopping tolerance); the check allows 1e-6. A
 mismatch that appears only under another kernel means a decision is resting on
 rounding or on the order of equal keys, and should be given an explicit rule.
 
@@ -169,12 +195,13 @@ blocked or alerting), and `python -m vaneck dashboard` renders
 pipeline would do with an order right now: `open`, `sell-only` (a retirement
 flag refuses new risk) or `blocked` (the halt flag, a blocking data check, or
 signing required with no key). It is computed by `vaneck/opstate.py`, which
-reads the switches in the order the pipeline does: data health gate, halt
-flag, retirement flags, approval signing, risk limits, then the monitor and
-the last decision for attention. A blocked health check, a blocked or unexecutable
-decision and any monitor alert are delivered to the webhook in
-`VANECK_WEBHOOK_URL` (Slack-compatible JSON) and always appended to
-`state/alerts.log`.
+reads the same switches as the pipeline (data health gate, halt flag,
+retirement flags, approval signing, risk limits), then the monitor and the
+last decision for attention. A blocking `check`, a `rebalance` that ends
+`blocked` or `awaiting_exec_bar`, any alert from `monitor` and any break found
+by `reconcile` are delivered to the webhook in `VANECK_WEBHOOK_URL`
+(Slack-compatible JSON) and always appended to `state/alerts.log`; `replay`,
+`work` and halted or unapproved submissions raise no alert.
 
 `make webdash` runs the test suite with a JUnit report and then
 `python -m vaneck webdash`, which collects the study results, the
@@ -192,9 +219,11 @@ rebalance, the paper book's monthly returns and drawdown beside the
 frozen expectation values, and a frozen-results check. That check
 recomputes the golden tables with the current engine and records, per
 table, how many values reproduce, together with the configuration and
-data hashes of every stored artefact the page reads. It adds about half
-a minute; `--skip-golden` leaves it out, and the dashboard then shows no
-reproducibility status.
+data hashes of the stored results the page reads (the export, the main
+report, the extension tables, the golden files and the expectation bands).
+It adds about 15 seconds (a standalone `python -m vaneck golden`, which
+also reruns the study, takes about 30); `--skip-golden` leaves it out, and
+the dashboard then shows no reproducibility status.
 
 Three more tables serve an operator. The operator state is the same report
 `status` prints, switch by switch, with the alert log from the store and the
@@ -236,7 +265,10 @@ after the opening it is fixed.
 
 `make typecheck` runs `python -m mypy` (CI does too); `pip install -e .`
 provides the `vaneck` console command; `make docker` builds an image that
-runs the test suite at build time and defaults to the health check.
+runs the test suite at build time (without the two golden tests) and then runs
+its health check against the last bar of the data it carries
+(`check --now data`). The image's default command is `vaneck check`, which
+judges the data against the clock.
 
 Run the type check through the project's interpreter, as above, and not
 through a separately installed `mypy`. An isolated copy cannot see pandas,
@@ -294,7 +326,8 @@ every `monitor` run evaluates R1 to R5 and records the verdict; `retire` and
 `halt` verdicts write `state/RETIRED_<strategy>.json`, after which the pipeline
 removes buy orders (sell-only) and reports `retired` when nothing remains.
 `python -m vaneck retire show|clear --by NAME --reason ...` inspects or clears
-the flag with a logged reason.
+the flag and logs who cleared it and why. The command does not enforce either
+field (the defaults are "operator" and an empty reason), so give both.
 
 ## Working capped orders
 

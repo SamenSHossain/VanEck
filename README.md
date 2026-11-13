@@ -20,15 +20,19 @@ are in [`reports/REPORT.md`](reports/REPORT.md). Three pre-registered
 extensions (tax-aware execution, a statistical design with power, a shared
 liquidity model with a capacity curve) are written up in
 [`reports/EXTENSIONS_FINDINGS.md`](reports/EXTENSIONS_FINDINGS.md): execution
-policy is worth about 0.08 post-tax Sharpe to every portfolio but changes no
-verdict, the original test could only have detected a 10% annual edge, and
-capacity under the pre-registered limits is about $3M.
+policy is worth 0.04 to 0.10 post-tax Sharpe depending on the portfolio (0.07
+for equal weight) but changes no verdict, the original test could only have
+detected an annual edge of 10% to 14%, and capacity under the pre-registered
+limits is about $3M for equal weight and 60/40 VanEck and below $1M for the two
+active rules tested. Every number in the reports was re-checked against the
+code and the data on 2026-11-13; the corrections that check led to are listed
+in [`docs/SPEC.md`](docs/SPEC.md) section 20.
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
-make test            # 123 tests: lookahead + leak canary, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
+make test            # 151 tests: lookahead + leak canary, pre-registered rules, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
 make lint            # ruff
 make typecheck       # python -m mypy, with pandas-stubs
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
@@ -50,14 +54,14 @@ for the runbook.
 
 | Command | What it does |
 |---|---|
-| `python -m vaneck fetch [--force]` | refresh the raw Yahoo Finance cache in `data/raw/` (the committed cache reproduces everything offline) |
+| `python -m vaneck fetch [--force]` | download any ticker missing from the raw Yahoo Finance cache in `data/raw/`; `--force` re-downloads them all (the committed cache reproduces everything offline) |
 | `python -m vaneck gate0` / `gate1` / `phase2` / `all [--force]` | run the study through that gate; without `--force` it stops at the first failed gate, as the plan prescribes |
 | `python -m vaneck validate` | the 2025+ hold-out: reports the seal and exits 2; `--unseal --by NAME --reason TEXT` opens it once, on the record, and freezes the tables (SPEC section 19; it has not been opened) |
-| `python -m vaneck check [--json] [--cross]` | data health report; `--cross` adds FRED agreement, peer divergence and the corporate-actions audit; exit code 2 on a blocking problem |
+| `python -m vaneck check [--json] [--cross] [--now D\|data]` | data health report; `--cross` adds FRED agreement, peer divergence and the corporate-actions audit; `--now data` judges staleness against the last bar instead of the clock (for a frozen cache, as in CI); exit code 2 on a blocking problem |
 | `python -m vaneck fetch --secondary` | refresh the FRED cross-validation cache |
 | `python -m vaneck golden [--update]` | verify (or refreeze) the frozen key results against the current engine and input hashes |
 | `python -m vaneck status` / `history` / `dashboard` | latest state with a `submit:` line saying whether orders would go out (open, sell-only or blocked; exit 1 if blocked, halted, retired or alerting), the run timeline, and `reports/dashboard.html` |
-| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, a frozen-results check with the hashes behind every table, the operator state with the alert and halt logs, an inventory of every input file, implementation shortfall per decision and the hold-out's seal (`--boot N`, `--skip-golden`; SPEC section 18) |
+| `make webdash` | runs the suite with a JUnit report, then writes `reports/dashboard_data.json` and the row tables in `reports/dashboard/` that feed the interactive results dashboard: gates and tests with bootstrap intervals, the rolling 12-month edge, target-weight paths, sensitivities, the paper book against its frozen expectation bands, a frozen-results check with the hashes behind every table, the operator state with the alert and halt logs, an inventory of every input file, implementation shortfall per decision and the hold-out's seal (export step alone: `python -m vaneck webdash [--boot N] [--skip-golden]`; SPEC section 18) |
 | `python -m vaneck approve <run_id> --by NAME` / `halt on|off --reason R` / `limits show|propose|approve` | approvals as code: a dry run must be approved before `--submit`; global halt; two-person risk-limit changes |
 | `python -m vaneck broker check` / `reconcile [--adopt]` / `rebalance --broker alpaca --submit` | venue connectivity, shadow-vs-venue reconciliation, execution at Alpaca with the local book as shadow ledger |
 | `python -m vaneck expectations --strategy S` / `retire show|clear` | freeze retirement expectation bands (SPEC s.17); inspect or clear a retirement flag |
@@ -65,17 +69,23 @@ for the runbook.
 | `python -m vaneck paper init|status|reset` | manage the paper book |
 | `python -m vaneck extensions` | the three pre-registered extensions; writes `reports/EXTENSIONS.md` |
 | `python -m vaneck rebalance --strategy S [--as-of D] [--submit] [--policy P2]` | one decision: health, targets, orders, risk checks, decision record; dry run unless `--submit`; optional execution policy P0-P3 |
-| `python -m vaneck replay --strategy S --start D --end D [--policy P2]` | operational rehearsal of the monthly cycle through the paper broker over a past window |
-| `python -m vaneck monitor --strategy S [--mark]` | reconcile the paper book with the research engine; exit code 1 on alerts |
+| `python -m vaneck replay --strategy S --start D --end D [--policy P2]` | operational rehearsal of the monthly cycle through the paper broker over a past window; it writes to the committed paper book unless `--book` and `--decisions` point elsewhere |
+| `python -m vaneck monitor --strategy S [--mark]` | reconcile the paper book with the research engine; exit code 1 on alerts; `--mark` first rolls the book to the latest bar, so leave it off for the committed 2024 book while the hold-out is sealed |
 
 Add `--log-json` before the command for structured logs.
 
 ## What is locked where
 
-Every modelling decision lives in `vaneck/config.py`; every operational limit in
-`vaneck/risk.py` and `vaneck/health.py`. Both are documented, with the reasons
-for each resolved ambiguity, in [`docs/SPEC.md`](docs/SPEC.md). Changing a
-value there after looking at results is a protocol violation.
+The main study's modelling decisions live in `vaneck/config.py`; the
+extensions' thresholds are set in `vaneck/execution.py`, `vaneck/liquidity.py`
+and `vaneck/design.py`. The pre-trade and data-health limits live in
+`vaneck/risk.py` and `vaneck/health.py`, and the monitoring, cross-validation,
+reconciliation and retirement thresholds in `vaneck/monitor.py`,
+`vaneck/crossval.py`, `vaneck/livebroker.py` and `vaneck/retire.py`. The
+research rules and the pre-trade, health and retirement limits are documented,
+with the reasons for each resolved ambiguity, in [`docs/SPEC.md`](docs/SPEC.md).
+Changing a value after looking at results is a protocol violation; the changes
+that were made are recorded in SPEC section 20.
 
 ## Layout
 
@@ -124,14 +134,14 @@ vaneck/
   shortfall.py   implementation shortfall per decision: distance to target, capped orders, explicit and delay cost
   holdout.py     the sealed 2025+ hold-out: status, one-time logged opening, frozen results
   cli.py         python -m vaneck ...
-tests/           123 tests across all layers incl. hypothesis property tests, a leak canary, goldens and a fake venue
+tests/           151 tests across all layers incl. the pre-registered rules, hypothesis property tests, a leak canary, goldens and a fake venue
 data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes
 data/secondary/  FRED series for cross-validation
 docs/            the plan, the pre-registered SPEC, the operations runbook
 reports/         REPORT.md, FINDINGS.md, tables/*.csv, figures/*.png, gates.json, run_manifest.json, monitor_*.md
 paper/           paper book and decisions from the 2024 rehearsal, the latest dry run, and demo/ (approve -> submit -> work -> halt)
-.github/         ci.yml (lint, mypy, tests, cross-check, dry-run decision), monthly.yml (scheduled cycle)
-Dockerfile       image that runs the suite at build and defaults to `vaneck check`
+.github/         ci.yml (lint, mypy, tests, health and cross-checks of the committed cache, dry-run decision), monthly.yml (scheduled refresh, health gate and a dry run on a fresh book)
+Dockerfile       image that runs the suite (without the two golden tests) at build and defaults to `vaneck check`
 ```
 
 ## Data
@@ -140,8 +150,8 @@ Daily data from Yahoo Finance via `yfinance`, cached verbatim so the study is
 reproducible without network access. Total-return prices are Yahoo's adjusted
 close; distribution yields for the tax model come from the dividend series and
 the unadjusted close. Macro inputs: S&P 500, VIX, 10-year yield, 13-week
-T-bill, and the S&P GSCI as the commodity-index proxy (the CRB index is not
-available on Yahoo).
+T-bill, and the S&P GSCI as the commodity-index proxy in place of the plan's
+CRB index.
 
 ## Cloud environment
 

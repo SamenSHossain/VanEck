@@ -12,14 +12,18 @@ check:
 report:
 	python -m vaneck all --force
 
+# replay, rebalance and monitor never touch the committed 2024 paper book past 2024-12-31: the 2025+ hold-out is
+# sealed (docs/SPEC.md section 19), and a decision on that book would mark it through the sealed period.
 replay:
-	python -m vaneck replay --strategy EqualWeight --start 2024-01-01 --end 2024-12-31
+	python -m vaneck replay --strategy EqualWeight --start 2024-01-01 --end 2024-12-31 \
+	  --book /tmp/vaneck-replay/book.json --decisions /tmp/vaneck-replay/decisions --out /tmp/vaneck-replay
 
 rebalance:
-	python -m vaneck rebalance --strategy EqualWeight --init-cash 10000000
+	python -m vaneck rebalance --strategy EqualWeight --init-cash 10000000 \
+	  --book /tmp/vaneck-dryrun/book.json --decisions /tmp/vaneck-dryrun/decisions
 
 monitor:
-	python -m vaneck monitor --strategy EqualWeight --mark
+	python -m vaneck monitor --strategy EqualWeight
 
 typecheck:
 	python -m mypy
@@ -46,4 +50,4 @@ webdash:
 	python -m pytest -q --junitxml=reports/junit.xml && python -m vaneck webdash
 
 docker:
-	docker build -t vaneck . && docker run --rm vaneck check
+	docker build -t vaneck . && docker run --rm vaneck check --now data

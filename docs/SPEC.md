@@ -1,16 +1,26 @@
 # Pre-registered specification (locked)
 
 This file records every modelling decision the backtests depend on, including
-how ambiguities in `revised-vaneck-project.md` were resolved. All rules were
+how ambiguities in `revised-vaneck-project.md` were resolved. The rules were
 implemented in `vaneck/config.py` and the strategy code **before** any strategy
-result was computed. Sections 1 to 17 were fixed before the results they
-govern, and no threshold in them has been changed since. Text added after
-results were known is marked where it stands: section 18 (descriptive
-displays), section 19 (the hold-out protocol, written before the hold-out is
-opened), and the corrections and tie rules of 2026-11-10 (section 20, with
-notes in sections 8 and 14), which restate some numbers and say which. Where
-the implementation deviates from the plan text, the deviation and its reason
-are listed in section 12.
+result was computed, except the tie rules stated on 2026-11-10 and the
+harvesting boundary changed on 2026-11-11 (section 20). This file was committed
+together with the first results, so the repository history alone cannot show
+that order. Sections 1 to 17 were fixed before the results they govern. One
+threshold in them was changed afterwards: on 2026-11-11 the harvesting rule of
+section 14 was set to treat a fund bought exactly 30 days earlier as recently
+bought, which restated the P3 column (section 20).
+
+Text added after results were known is marked where it stands: section 18
+(descriptive displays), section 19 (the hold-out protocol, written before the
+hold-out is opened), the corrections and tie rules of 2026-11-10, the
+harvesting change of 2026-11-11 and the corrections of 2026-11-13 (section 20,
+with notes in sections 6, 8, 11, 12 and 14), which restate some numbers and say
+which. On 2026-11-13 descriptions in sections 12, 13, 15, 17 and 18 were also
+corrected to match what the code does; no rule changed. The hold-out row of
+section 1 was reworded on 2026-11-10 to refer to section 19. Where the implementation deviates from the plan text, the deviation
+and its reason are listed in section 12. Approximations the code makes inside
+these rules, each too small to change a result, are listed in section 21.
 
 ## 1. Data
 
@@ -86,11 +96,14 @@ available, default off).
 * Wash sales: a loss on fund X is disallowed to the extent X (or a configured
   substantially-identical group member) was bought within 30 calendar days before
   or after; the disallowed loss is added to the replacement lot's basis. Default
-  groups: none (Gate 0 found no pair above 0.95).
+  groups: none (Gate 0 found no pair above 0.95). A purchase on the day of the
+  sale counts (made explicit on 2026-11-13; see section 20).
 * Taxes for year Y are paid out of the portfolio at the first rebalance of year
   Y+1 (annual settlement); net losses carry forward. The $3,000 ordinary-income
   offset is ignored. Wash reversals triggered after a year has been settled are
-  charged in the following year (timing approximation).
+  charged in the following year, the year of the replacement purchase (timing
+  approximation). Until 2026-11-13 the code booked them to the settled year,
+  where they were never charged; see section 20.
 * Post-tax NAV = gross value - accrued unpaid liability (so the post-tax curve is
   continuous through settlements). Pre-tax and post-tax are separate simulations.
 
@@ -141,23 +154,32 @@ without saying how a signal and an optimizer interact. Locked rule:
 | 2 | at least one primary strategy with p < 0.0083 (post-tax annual test) |
 | 3 | winners' Crisis drawdown within 5 percentage points of EW's; benefit not confined to one regime |
 
+Gate 3 was never reached: no strategy passed Gate 2. The code tabulates the
+drawdown criterion in every regime for every primary strategy, but it
+implements neither the regime-breadth criterion nor a Gate 3 verdict. (Noted
+on 2026-11-13.)
+
 **Turnover** = sum over rebalances of |trades| / (2 x NAV), i.e. one-way, excluding the initial funding trade, annualised by calendar time.
 
-The CLI stops at a failed gate; `--force` continues and labels later phases "informational".
+The CLI stops at a failed gate. `--force` continues; Phase 2 run after a failed
+Gate 1 is labelled "informational" (a Gate 1 run forced past a failed Gate 0
+carries no label; Gate 0 passed in this study).
 
 ## 12. Deviations from the plan text (all decided before running)
 
 | Plan text | Implementation | Reason |
 |---|---|---|
-| Cash earns a flat 4% | 13-week T-bill yield (^IRX); 4% flat kept as a sensitivity | A flat 4% over 2017-2021 (T-bills near 0%) would reward every cash-holding regime action for free and bias Phase 2 toward the overlay |
+| Cash earns a flat 4% | 13-week T-bill yield (^IRX); 4% flat kept as a sensitivity | A flat 4% over 2017-2021 (T-bills averaged about 1%, and near 0% in 2020-2021) would reward every cash-holding regime action for free and bias Phase 2 toward the overlay |
 | "Pull 5-year daily prices", period 2019-2024 | All common history from 2014-05-16; OOS 2017-06 to 2024-12 (7 full years) | 5 years of data cannot hold a 3-year training window plus 5 OOS years; more OOS years strengthen the annual t-test |
-| CRB Commodity Index | S&P GSCI (^SPGSCI) | CRB is not on Yahoo Finance; GSCI is the closest freely available broad commodity index |
+| CRB Commodity Index | S&P GSCI (^SPGSCI) | A broad commodity index available from the same free source as every other series |
 | Crisis "hold hedges only (OUNZ, GDX, VGIT)" | VGIT pulled as an auxiliary tradeable; each hedge capped at the 20% position limit, remainder cash | Keeps the position cap consistent; VGIT is not in the 9-fund universe |
 | Four regimes | Fifth "Neutral" label for days matching none | The four definitions do not partition the state space |
 | 15% cap in the scaffold table vs 5-20% in Phase 2 | 15% applies to the Phase 1 scaffold (non-binding at 1/9); 5-20% to allocation rules | Both appear in the plan |
 | "T-test on annual returns across 5 OOS years" | 7 full OOS years (2018-2024) | Data permits more |
 | Rebalance uses data "as of market close on rebalance date" and "Jan 2021 rebalance uses only data through Dec 2020" | Signal on prior close, execution at the rebalance-day close | The only reading consistent with both statements |
 | Bid-ask pulled from brokers | Tiered table by dollar volume with an override file | No broker quote feed available in this environment; the override path is the plan's intended input |
+| Phase 1.3: "pre-tax and post-tax backtests differ by > 20%" | Reported in the Gate 1 checks as equal weight's post-tax Sharpe haircut (> 20%), not decisive | It measures how much taxes matter, not whether equal weight beats 60/40; the decisive Sharpe and drawdown criteria of section 11 are already post-tax. (Row added on 2026-11-13; the code has done this since the first commit.) |
+| Overall success and failure: post-tax Sharpe above 1.0, below 0.5 | Not used | The gates decide. Equal weight's post-tax Sharpe of 0.37 would also count as a failure under the plan's own definition. (Row added on 2026-11-13.) |
 
 ## 13. Operational limits (pre-registered, `vaneck/risk.py` and `vaneck/health.py`)
 
@@ -174,7 +196,7 @@ These govern the paper/live decision pipeline, not the research results.
 | cash after trades and estimated costs | >= 0 | block |
 | signal staleness | <= 5 calendar days | block |
 | drawdown halt | book drawdown > -25% from peak | otherwise buys removed, sells kept |
-| cost reserve | 10 bps of equity withheld from targets | - |
+| cost reserve | 10 bps of equity withheld from targets (with an execution policy P0 to P3, 10 bps of the cash balance) | - |
 
 | Health check | Block | Warn |
 |---|---|---|
@@ -235,16 +257,23 @@ Rules (all fixed now):
   target as part of the same exposure group. A fund that was loss-sold is not
   repurchased for 31 days. When the substitute itself qualifies for harvesting,
   it is sold and the original fund is bought back (roles alternate).
-* **Substitute map** (different issuer and index for every pair): SMH->SOXX,
+* **Substitute map** (a different issuer for every pair, and a different index
+  for every pair except SPY->IVV, which both track the S&P 500; OUNZ and IAU both
+  hold physical gold, and BND and AGG track two versions of the US Aggregate
+  bond index): SMH->SOXX,
   MOAT->QUAL, GDX->RING, ANGL->FALN, REMX->PICK, HAP->GNR, FLTR->FLOT,
   PFXF->PFF, OUNZ->IAU, SPY->IVV, BND->AGG, VGIT->IEI. Physical gold trusts
-  (OUNZ/IAU) are the greyest pair under the substantially-identical standard; the
-  result is reported with and without that pair.
+  (OUNZ/IAU) and the two S&P 500 funds (SPY/IVV) are the greyest pairs under the
+  substantially-identical standard; the result is reported with and without the
+  gold pair. (The parenthesis was corrected on 2026-11-13. SPY is held only by
+  60/40 Classic, the reference portfolio, so the SPY/IVV pair touches no
+  verdict.)
 * **Taxes.** Single 37% rate as in the main study. Sensitivity: short-term
   gains at 46% (37% federal + 3.8% NIIT + about 5% state), long-term at 37%.
 * **Portfolios.** EqualWeight and 60/40 VanEck (the Gate 1 pair), 60/40
-  Classic (reference), DriftxMinVar without overlay (informational, the best
-  diagnostic rule).
+  Classic (reference), DriftxMinVar without overlay (informational; the best
+  diagnostic rule by pre-tax Sharpe, with lower turnover than DriftxMaxSharpe,
+  which is marginally ahead post-tax).
 * **Pre-registered readout.** (a) The Gate 1 margin (EW post-tax Sharpe minus
   60/40 VanEck post-tax Sharpe) under each policy; the verdict changes only if
   the margin reaches 0.20 under a policy applied to both portfolios. (b) The
@@ -300,7 +329,8 @@ The frozen reference results (`tests/golden`) were refrozen with this change.
   difference series of all strategies in a family, circular block bootstrap
   with block length 6 and 2000 draws, studentised statistics; families: the 6
   primary strategies, and all 12. White's reality-check p-value is the adjusted
-  p of the best strategy.
+  p of the best strategy (a studentised variant; White's original statistic is
+  not studentised).
 * **Status.** These are supplementary to the closed main study. For any future
   study the proposal is that the monthly HAC test with Romano-Wolf control
   replaces the annual Bonferroni test as the decisive one.
@@ -342,7 +372,9 @@ strategy and execution policy, pre-tax, and are frozen once per deployment
 
 "Retire" and "halt" write a flag the decision pipeline reads: new risk is
 refused (sell-only decisions remain possible) until a human clears the flag
-with a recorded reason. "Review" raises an alert and is recorded. A rule that
+with `python -m vaneck retire clear --by NAME --reason TEXT`, which records
+both (the command does not enforce them: the defaults are "operator" and an
+empty reason). "Review" raises an alert and is recorded. A rule that
 has fewer observations than it needs reports "insufficient history" and does
 not fire. With the paper rehearsal (12 months) R1 and R2 can fire; R3 needs at
 least 14 months of marks.
@@ -361,9 +393,9 @@ depends on them, and none of them is a new hypothesis test.
 | Target weights | The weights each strategy decided at every rebalance, cash as the residual, with the regime the overlay saw on the signal date. |
 | Assumption table | The main study's sensitivity runs (flat 4% cash, HIFO lots, no distribution tax, quarterly rebalancing of equal weight) restated as the Gate 1 margin under each assumption. |
 | Paper book against the bands | Calendar-month returns and the drawdown path of the paper book against the frozen expectation values of section 17. The rule verdicts still come from `vaneck/retire.py`. |
-| Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of every artefact the dashboard reads. |
+| Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of the stored results the dashboard reads (the export itself, the main report, the extension tables, the golden files and the expectation bands). The paper book, decision records and check outputs carry no hashes. |
 | Operator state | The switches `python -m vaneck status` reads (data health gate, halt flag, retirement flags, approval signing, risk limits, monitor, last decision) as they stood when the data was exported, with the alert log and the halt history. Not a live reading. |
-| Input inventory | Every stored input series with its role, provider, span, fetch time and file hash, beside the health and cross-validation checks of section 13. |
+| Input inventory | Every stored input series with its role, provider, span, fetch time and file hash, beside the health checks of section 13 and the cross-validation checks of `python -m vaneck check --cross`. |
 | Implementation shortfall | Per submitted decision of the paper book: the one-way distance to target before trading (positions from earlier fills at the signal-date close) and after it (executed weights at the execution-date close), the share of the wanted notional the participation cap let through, the explicit cost (the cost model's charge on the fills) and the delay cost (fill price against the signal-date close, signed so that a loss is positive). Read from the decision records and the book's fill history. |
 | Capacity check | The paper book's latest equity over the capacity section 16 estimates for its strategy, with the modelled drag and tracking error at the largest tested size not above the book. |
 
@@ -402,16 +434,23 @@ not after.
   in-sample observation worth checking: equal weight's small lead over 60/40
   VanEck (+0.07 post-tax Sharpe, 95% interval about -0.04 to +0.18). With
   under two years of data the hold-out interval will be wide. Three verdicts
-  are allowed and no others: "consistent" when the hold-out margin lies
-  inside the in-sample interval; "contradicts the lead" when the hold-out
-  interval lies wholly below zero; "uninformative" otherwise.
+  are allowed and no others, checked in this order: "contradicts the lead"
+  when the hold-out interval lies wholly below zero; "consistent" when the
+  hold-out margin lies inside the in-sample interval; "uninformative"
+  otherwise. The verdict is read from the reported margin and interval; no
+  code computes it. (The order was added on 2026-11-13, before the hold-out
+  was opened: without it a margin inside the in-sample interval whose own
+  interval lies below zero met two verdicts.)
 * **Afterwards.** The tables are frozen at the last bar evaluated. Data that
   arrives later is new out-of-sample data, and a later look at it needs its
   own entry in this section before it is taken.
 * **What does not open it.** Data health checks and dry-run decisions on the
   newest bar read recent prices to check the data and to form signals. None
   of them computes the performance of a strategy or of a benchmark after
-  2024-12-31, and the dashboard draws nothing after that date.
+  2024-12-31, and the dashboard shows no performance after that date; it does
+  show data-check readings, input-file spans and decision records for newer
+  bars. The scheduled monthly job makes its dry run on a fresh book and runs
+  the monitor only once the hold-out has been opened (section 20, 2026-11-13).
 
 ## 20. Corrections and clarifications of 2026-11-10 (after the results were known)
 
@@ -443,9 +482,11 @@ now an explicit rule. No pre-registered threshold was changed.
    The thresholds used before (1e-12 units, 1e-9 dollars) were the size of the
    residue itself for a portfolio of this size. No frozen value moved.
 
-Effect of rule 2, the only one that moves results on the original machine.
-Everything else in the study is unchanged, including every gate, test outcome
-and verdict:
+Effect of rule 2, the only one that moves results on the original machine. No
+gate, significance outcome or verdict changed. The other statistics of the four
+Drift rules moved with it, including their rows in extensions 1 to 3
+(DriftxMinVar P3 post-tax Sharpe 0.4027 to 0.4041). The post-tax Sharpe ratios
+of the main study:
 
 | Post-tax Sharpe | Before | After |
 |---|---|---|
@@ -458,7 +499,7 @@ Check made after the change: the 248 frozen values were recomputed under
 AVX-512, AVX2 and SSE-only arithmetic kernels, three BLAS kernels,
 single-threaded BLAS, and two environments (Python 3.11 with numpy 2.4, Python
 3.13 with numpy 2.5). All agree within 4e-7 relative. The largest spread is on
-the MaxSharpe strategies and comes from the optimizer's stopping tolerance;
+the MaxSharpe strategies, most likely from the optimizer's stopping tolerance;
 the golden test allows 1e-6. `docs/OPERATIONS.md` gives the command.
 
 **Change of 2026-11-11, decided by the owner of this protocol.** The
@@ -479,3 +520,91 @@ defers a number of harvests by a month and restates the P3 column:
 
 The margin stays far below 0.20. P0 to P2 and everything outside extension 1
 are unchanged.
+
+### Corrections of 2026-11-13 (after an independent check of every number)
+
+A full re-check of the reports against the code and the data found one defect
+that moves results, one rule the code applied more narrowly than section 6
+states, one rounding error in a formula, and two operational faults. No
+pre-registered threshold was changed, and no gate, test outcome or verdict
+moved.
+
+1. **Late wash-sale reversals were never charged.** Section 6 charges a
+   reversal that arrives after its loss year has been settled in the following
+   year. The ledger booked it to the loss year, which was already settled, so
+   the tax was never paid. It happens when a fund sold at a loss in December
+   is bought back at the first rebalance of January, after that day's
+   settlement (in the main study, losses of 2018-12-03 reversed on 2019-01-02).
+   The ledger now charges such a reversal in the year of the purchase. The four
+   baselines under P0 are unaffected. Post-tax Sharpe ratios fall by at most
+   0.0013; the largest moves:
+
+   | Post-tax Sharpe | Before | After |
+   |---|---|---|
+   | DriftxMinVar+Regime | 0.2370 | 0.2364 |
+   | DriftxMaxSharpe+Regime | 0.2247 | 0.2241 |
+   | DriftxMinVar (no overlay) | 0.3738 | 0.3727 |
+   | DriftxMaxSharpe (no overlay) | 0.3745 | 0.3732 |
+   | MomentumxMinVar (no overlay) | 0.2675 | 0.2665 |
+   | MomentumxMaxSharpe (no overlay) | 0.2631 | 0.2620 |
+   | Gate 1 margin under P1 | 0.0719 | 0.0718 |
+
+   In extension 2 the best rule's observed edge (DriftxMaxSharpe, +1.43% a
+   year) would now take 65 years to detect instead of 64, and the reality-check
+   p over all twelve rules is 0.36 instead of 0.35. The frozen results were
+   refrozen; 42 values moved.
+2. **Same-day purchases.** The ledger did not treat a purchase made on the day
+   of a loss sale as a wash sale, on either side, although section 6 counts 30
+   days "before or after". It now does. No number moves: the planner makes one
+   net trade per fund per day, and no wash-sale group is configured, so a
+   same-day repurchase never occurs in the study.
+3. **Newey-West lag.** floor(0.75 n^(1/3)) was computed with a floating-point
+   power, which gives one lag too few when n is a perfect cube (64, 512,
+   1728). It is now computed with an exact cube root. At the study's n = 90 the
+   lag is 3 either way; no number moves.
+4. **Operations.** The continuous-integration health step judged the frozen
+   data cache against the wall clock, so it would have failed every run from
+   2026-11-17; it now judges against the cache's last bar. The scheduled
+   monthly job used the committed 2024 paper book, which a decision rolls
+   forward to the signal date, so a run would have marked that book through
+   the sealed hold-out, and its monitor step would have computed returns inside
+   it. The job now decides on a fresh book, as of the last trading day of the
+   previous month, and monitors only once the hold-out has been opened. The
+   job had not yet run.
+
+## 21. Known approximations
+
+Each of these was measured on 2026-11-13 and is too small to change any result.
+They are recorded so that a reader can reproduce the numbers exactly.
+
+* **Risk-free timing.** Cash grows on day t at the previous day's T-bill yield,
+  while the Sharpe ratio subtracts day t's own yield. Aligning the two moves
+  equal weight's post-tax Sharpe from 0.3686 to 0.3688 and leaves the Gate 1
+  margin at 0.0706.
+* **Negative T-bill yields** are floored at zero for the cash sleeve and the
+  risk-free rate: 7 closes, 2020-03-19 to 2020-03-27, as low as -0.105%.
+* **Wash sales are judged on each sale's net result**, spreading one average
+  loss per unit over the lots sold, not lot by lot. Applied lot by lot, equal
+  weight's post-tax Sharpe would be 0.36824 instead of 0.36864 and the Gate 1
+  margin 0.07065 instead of 0.07057.
+* **The reality-check p** of section 15 is the studentised stepdown p of the
+  best strategy, not White's original unstudentised statistic.
+* **Romano-Wolf statistics** are studentised with the plain standard error
+  (sd / sqrt(n)) in the sample and in every resample, not with a
+  dependence-robust one. The best rule's stepdown t is 1.03 against a
+  Newey-West t of 1.14; no rejection is near either way.
+* **The bootstrap p of section 10** is the share of resampled Sharpe
+  differences at or below zero, which inverts a percentile interval; it is
+  not computed under an imposed null. A null-centred p on the same draws
+  differs by at most about 0.03 (measured before the 2026-11-13 correction).
+* **The deflated Sharpe ratio** uses the raw count of strategies (6 or 12) as
+  the number of trials. The rules are closely related, so the effective number
+  of independent trials is smaller and the deflation errs on the conservative
+  side.
+* **The monthly minimum detectable effect** of section 15 uses the plain
+  standard deviation of the monthly differences. With the Newey-West error of
+  the paired test it would be about 3.7% a year instead of 4% (Bonferroni).
+* **The regime tables** (Phase 2, Gate 3 and the dashboard) classify each day
+  by that day's close, while the overlay acts on the regime of the signal date.
+  The tables describe what happened in each regime; they are not what the
+  overlay saw. `reports/FINDINGS.md` section 5 shows how much this matters.
