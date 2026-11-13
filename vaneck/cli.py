@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -825,4 +826,9 @@ def main(argv=None) -> int:
 
     args = p.parse_args(argv)
     setup_logging(args.log_json, args.log_level)
-    return args.func(args)
+    from .holdout import HoldoutSealed
+    try:
+        return args.func(args)
+    except HoldoutSealed as e:
+        print(f"refused: {e}", file=sys.stderr)
+        return 2

@@ -25,7 +25,9 @@ COMMODITY_FUNDS: tuple[str, ...] = ("OUNZ",)
 # Auxiliary tradeable instruments (benchmarks / hedges), not part of the universe.
 AUX_TICKERS: tuple[str, ...] = ("SPY", "BND", "VGIT")
 
-# Tax-loss-harvesting substitutes (different issuer and index for every pair; SPEC section 14).
+# Tax-loss-harvesting substitutes, SPEC section 14. The two funds of every pair have different issuers.
+# They also track different indexes, except SPY and IVV, which both track the S&P 500, and OUNZ and IAU,
+# which both hold physical gold. BND and AGG track two versions of the US Aggregate bond index.
 SUBSTITUTES: dict[str, str] = {
     "SMH": "SOXX", "MOAT": "QUAL", "GDX": "RING", "ANGL": "FALN", "REMX": "PICK", "HAP": "GNR",
     "FLTR": "FLOT", "PFXF": "PFF", "OUNZ": "IAU", "SPY": "IVV", "BND": "AGG", "VGIT": "IEI",
@@ -38,7 +40,7 @@ MACRO_TICKERS: dict[str, str] = {
     "vix": "^VIX",      # CBOE volatility index
     "tnx": "^TNX",      # 10-year Treasury yield (percent)
     "irx": "^IRX",      # 13-week T-bill discount yield (percent)
-    "crb": "^SPGSCI",   # S&P GSCI, proxy for the CRB commodity index (CRB not on Yahoo)
+    "crb": "^SPGSCI",   # S&P GSCI, used in place of the plan's CRB index; see SPEC section 12
 }
 
 CASH = "CASH"  # synthetic money-market sleeve

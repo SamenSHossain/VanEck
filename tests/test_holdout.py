@@ -57,3 +57,42 @@ def test_the_record_is_written_before_any_number(synth, spec, tmp_path, monkeypa
     monkeypatch.undo()
     results = holdout.complete(synth, spec, tmp_path)                  # finishing it is allowed; reopening is not
     assert results["window"][1] == st["evaluated_through"] and holdout.stored(tmp_path) == results
+
+
+def test_a_book_with_positions_cannot_be_valued_inside_the_sealed_holdout(synth, tmp_path, monkeypatch):
+    from vaneck.broker import PaperBroker
+    from vaneck.costs import CostModel
+    from vaneck.risk import Order
+
+    end = synth.index[800]
+    spec = replace(SPEC, study_end=str(end.date()), holdout_start=str(synth.index[801].date()))
+    folder = tmp_path / "holdout"
+    monkeypatch.setattr(holdout, "HOLDOUT_DIR", folder)
+    d0 = synth.index[700]
+    book = PaperBroker(tmp_path / "book.json", synth, CostModel(spec, override_file=None), spec)
+    book.init(1_000_000.0, d0, data_vintage=str(d0.date()))
+    book.submit([Order("SMH", "BUY", 100, float(synth.close.at[d0, "SMH"]))], d0)
+    book.advance_to(end)                                    # up to the study's last day: allowed
+    with pytest.raises(holdout.HoldoutSealed):
+        book.advance_to(synth.index[810])                   # a day inside the hold-out: refused
+    assert book.as_of == end                                # and nothing was marked
+
+    cash_only = PaperBroker(tmp_path / "cash.json", synth, CostModel(spec, override_file=None), spec)
+    cash_only.init(1_000_000.0, d0, data_vintage=str(d0.date()))
+    cash_only.advance_to(synth.index[810])                  # a book of cash measures no strategy: allowed
+
+    folder.mkdir()
+    (folder / holdout.RECORD).write_text("{}")              # once the opening is on record the book may be rolled
+    book.advance_to(synth.index[810])
+    assert book.as_of == synth.index[810]
+
+
+def test_the_cli_reports_a_sealed_holdout_refusal_with_exit_code_2(monkeypatch, capsys):
+    from vaneck import cli
+
+    def refuse(args):
+        raise holdout.HoldoutSealed("would value positions after the study's end")
+
+    monkeypatch.setattr(cli, "cmd_check", refuse)
+    assert cli.main(["check"]) == 2
+    assert "refused" in capsys.readouterr().err

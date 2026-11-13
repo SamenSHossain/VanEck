@@ -145,6 +145,14 @@ class PaperBroker:
         start = self.as_of
         if date <= start:
             return
+        if date > pd.Timestamp(self.spec.study_end) and any(abs(float(s)) > 1e-9 for s in b["positions"].values()):
+            # imported here: holdout depends on the study modules
+            from .holdout import HoldoutSealed, is_sealed
+            if is_sealed():
+                raise HoldoutSealed(
+                    f"this book holds positions, and valuing them after {self.spec.study_end} would measure performance "
+                    "inside the sealed hold-out (SPEC section 19). For a dry run on newer bars use a fresh book "
+                    "(--init-cash with --book and --decisions in a new folder); open the hold-out first for anything else.")
         days = self.md.index[(self.md.index > start) & (self.md.index <= date)]
         y = self.md.cash_yield(self.spec)
         vintage = pd.Timestamp(b["data_vintage"])

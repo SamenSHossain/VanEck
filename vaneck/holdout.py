@@ -26,6 +26,15 @@ class AlreadyOpened(RuntimeError):
     """The hold-out has been opened before; it is evaluated once."""
 
 
+class HoldoutSealed(RuntimeError):
+    """An operation would value positions inside the sealed hold-out."""
+
+
+def is_sealed(folder: Path | None = None) -> bool:
+    """True until the opening record exists. Reads one file name, never a price."""
+    return not ((folder or HOLDOUT_DIR) / RECORD).exists()
+
+
 def _read(path: Path) -> dict | None:
     return json.loads(path.read_text()) if path.exists() else None
 

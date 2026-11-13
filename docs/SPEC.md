@@ -2,25 +2,39 @@
 
 This file records every modelling decision the backtests depend on, including
 how ambiguities in `revised-vaneck-project.md` were resolved. The rules were
-implemented in `vaneck/config.py` and the strategy code **before** any strategy
-result was computed, except the tie rules stated on 2026-11-10 and the
-harvesting boundary changed on 2026-11-11 (section 20). This file was committed
-together with the first results, so the repository history alone cannot show
-that order. Sections 1 to 17 were fixed before the results they govern. One
-threshold in them was changed afterwards: on 2026-11-11 the harvesting rule of
-section 14 was set to treat a fund bought exactly 30 days earlier as recently
-bought, which restated the P3 column (section 20).
+implemented in `vaneck/config.py` and the strategy code **before** the results
+they govern were computed, except the tie and rounding-residue rules stated on
+2026-11-10 and the harvesting boundary changed on 2026-11-11 (section 20).
+Gate 3, which was never reached, is only partly implemented (section 11). This
+file was committed together with the first results, so the repository history
+alone cannot show that order. Sections 1 to 17 were fixed before the results
+they govern. One threshold in them was changed afterwards: on 2026-11-11 the
+harvesting rule of section 14 was set to treat a fund bought exactly 30 days
+earlier as recently bought, which restated the P3 column (section 20).
+
+The code that applies the rules was also corrected after results were known.
+Three corrections moved numbers: the wash-sale matching of section 6 on
+2026-11-08, which is recorded in `reports/FINDINGS.md` and not in this file;
+the no-rebuy window of section 14 on 2026-11-10; and the late wash-sale
+reversals of section 6 on 2026-11-13. Two more on 2026-11-13, for same-day
+purchases under section 6 and for the Newey-West lag of section 15, moved no
+number. Section 20 lists all of these except the first.
 
 Text added after results were known is marked where it stands: section 18
 (descriptive displays), section 19 (the hold-out protocol, written before the
 hold-out is opened), the corrections and tie rules of 2026-11-10, the
 harvesting change of 2026-11-11 and the corrections of 2026-11-13 (section 20,
 with notes in sections 6, 8, 11, 12 and 14), which restate some numbers and say
-which. On 2026-11-13 descriptions in sections 12, 13, 15, 17 and 18 were also
-corrected to match what the code does; no rule changed. The hold-out row of
-section 1 was reworded on 2026-11-10 to refer to section 19. Where the implementation deviates from the plan text, the deviation
-and its reason are listed in section 12. Approximations the code makes inside
-these rules, each too small to change a result, are listed in section 21.
+which. The hold-out row of section 1 was reworded on 2026-11-10 to refer to
+section 19. On 2026-11-13, after a check against the code, the data and the
+results, wording in sections 11, 12, 13, 14, 15, 17, 18 and 20 was also
+corrected beyond the notes listed above; those corrections are not marked where
+they stand. The same day section 21 was added, and section 19 was amended
+while the hold-out was still sealed; its new order for checking the verdicts
+is marked where it stands. No rule of sections 1 to 17 changed. Where the
+implementation deviates from the plan text, the deviation and its reason are
+listed in section 12. Approximations the code makes inside these rules are
+listed in section 21; none of them changes a gate, test outcome or verdict.
 
 ## 1. Data
 
@@ -393,7 +407,7 @@ depends on them, and none of them is a new hypothesis test.
 | Target weights | The weights each strategy decided at every rebalance, cash as the residual, with the regime the overlay saw on the signal date. |
 | Assumption table | The main study's sensitivity runs (flat 4% cash, HIFO lots, no distribution tax, quarterly rebalancing of equal weight) restated as the Gate 1 margin under each assumption. |
 | Paper book against the bands | Calendar-month returns and the drawdown path of the paper book against the frozen expectation values of section 17. The rule verdicts still come from `vaneck/retire.py`. |
-| Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of the stored results the dashboard reads (the export itself, the main report, the extension tables, the golden files and the expectation bands). The paper book, decision records and check outputs carry no hashes. |
+| Frozen-results check | The golden tables recomputed by the current engine and compared value by value within the stored tolerances, with the configuration and data hashes of the stored results the dashboard reads (the export itself, the main report, the extension tables, the golden files and the expectation bands). The paper book, the health and cross-validation check outputs and the monitor report carry no hashes. Each decision record carries the configuration and data hashes in its run manifest, but the dashboard does not show them. |
 | Operator state | The switches `python -m vaneck status` reads (data health gate, halt flag, retirement flags, approval signing, risk limits, monitor, last decision) as they stood when the data was exported, with the alert log and the halt history. Not a live reading. |
 | Input inventory | Every stored input series with its role, provider, span, fetch time and file hash, beside the health checks of section 13 and the cross-validation checks of `python -m vaneck check --cross`. |
 | Implementation shortfall | Per submitted decision of the paper book: the one-way distance to target before trading (positions from earlier fills at the signal-date close) and after it (executed weights at the execution-date close), the share of the wanted notional the participation cap let through, the explicit cost (the cost model's charge on the fills) and the delay cost (fill price against the signal-date close, signed so that a loss is positive). Read from the decision records and the book's fill history. |
@@ -445,14 +459,23 @@ not after.
   arrives later is new out-of-sample data, and a later look at it needs its
   own entry in this section before it is taken.
 * **What does not open it.** Data health checks and dry-run decisions on the
-  newest bar read recent prices to check the data and to form signals. None
-  of them computes the performance of a strategy or of a benchmark after
-  2024-12-31, and the dashboard shows no performance after that date; it does
-  show data-check readings, input-file spans and decision records for newer
-  bars. The scheduled monthly job makes its dry run on a fresh book and runs
-  the monitor only once the hold-out has been opened (section 20, 2026-11-13).
+  newest bar read recent prices to check the data and to form signals. A
+  decision, dry run or not, also rolls its paper book forward to the signal
+  date before it sizes any order, so a dry run on a bar after 2024-12-31 is
+  made on a book that holds only cash, as CI, the scheduled monthly job and
+  `make rebalance` do (`--init-cash` with `--book` and `--decisions` under
+  `/tmp`, and no `--submit`). Made that way, none of them computes the
+  performance of a strategy or of a benchmark after 2024-12-31. Since
+  2026-11-13 the paper book enforces this: while the hold-out is sealed it
+  refuses to value positions after 2024-12-31, so a decision, `monitor --mark`
+  or `paper status --mark` on the committed 2024 book, the default, stops with
+  exit code 2 instead of rolling that book through the sealed period. The
+  dashboard shows no performance after 2024-12-31; it does show data-check
+  readings, input-file spans and decision records for newer bars. The
+  scheduled monthly job runs the monitor only once the hold-out has been
+  opened (section 20, 2026-11-13).
 
-## 20. Corrections and clarifications of 2026-11-10 (after the results were known)
+## 20. Corrections and clarifications of 2026-11-10, 2026-11-11 and 2026-11-13 (after the results were known)
 
 The frozen results did not reproduce on every machine: the same commit passed
 the golden test on one CI runner and failed it on another. Four causes were
@@ -482,7 +505,8 @@ now an explicit rule. No pre-registered threshold was changed.
    The thresholds used before (1e-12 units, 1e-9 dollars) were the size of the
    residue itself for a portfolio of this size. No frozen value moved.
 
-Effect of rule 2, the only one that moves results on the original machine. No
+Effect of rule 2, the only one of rules 2 to 4 that moves results on the
+original machine (rule 1's effect on the P3 column is in section 14). No
 gate, significance outcome or verdict changed. The other statistics of the four
 Drift rules moved with it, including their rows in extensions 1 to 3
 (DriftxMinVar P3 post-tax Sharpe 0.4027 to 0.4041). The post-tax Sharpe ratios
@@ -559,8 +583,9 @@ moved.
    net trade per fund per day, and no wash-sale group is configured, so a
    same-day repurchase never occurs in the study.
 3. **Newey-West lag.** floor(0.75 n^(1/3)) was computed with a floating-point
-   power, which gives one lag too few when n is a perfect cube (64, 512,
-   1728). It is now computed with an exact cube root. At the study's n = 90 the
+   power, which gives one lag too few when 0.75 n^(1/3) is a whole number, that
+   is when n is the cube of a multiple of 4 (64, 512, 1728 and so on). It is now
+   computed with an exact cube root. At the study's n = 90 the
    lag is 3 either way; no number moves.
 4. **Operations.** The continuous-integration health step judged the frozen
    data cache against the wall clock, so it would have failed every run from
@@ -570,12 +595,19 @@ moved.
    the sealed hold-out, and its monitor step would have computed returns inside
    it. The job now decides on a fresh book, as of the last trading day of the
    previous month, and monitors only once the hold-out has been opened. The
-   job had not yet run.
+   job had not yet run. The same roll-forward could be started by hand, since
+   the committed book is the CLI's default, so the paper book now refuses to
+   value positions after 2024-12-31 while the hold-out is sealed (section 19).
 
 ## 21. Known approximations
 
-Each of these was measured on 2026-11-13 and is too small to change any result.
-They are recorded so that a reader can reproduce the numbers exactly.
+None of these changes a gate, test outcome or verdict. The last one changes
+the regime tables themselves substantially: with the regime read at the
+previous close, equal weight's post-tax Sharpe in Crisis is 0.75 instead of
+-1.67, as `reports/FINDINGS.md` section 5 shows. Gate 3, the only gate that
+reads these tables, was never reached, and its Crisis drawdown criterion holds
+for all six primary strategies under either reading. They are recorded so that
+a reader can reproduce the numbers exactly.
 
 * **Risk-free timing.** Cash grows on day t at the previous day's T-bill yield,
   while the Sharpe ratio subtracts day t's own yield. Aligning the two moves
@@ -584,11 +616,18 @@ They are recorded so that a reader can reproduce the numbers exactly.
 * **Negative T-bill yields** are floored at zero for the cash sleeve and the
   risk-free rate: 7 closes, 2020-03-19 to 2020-03-27, as low as -0.105%.
 * **Wash sales are judged on each sale's net result**, spreading one average
-  loss per unit over the lots sold, not lot by lot. Applied lot by lot, equal
-  weight's post-tax Sharpe would be 0.36824 instead of 0.36864 and the Gate 1
-  margin 0.07065 instead of 0.07057.
+  loss per unit over the lots sold, not lot by lot. Applied lot by lot, the
+  result depends on how replacement shares are matched to a sale's loss lots.
+  Matched to the loss lots in proportion to their units, equal weight's
+  post-tax Sharpe would be 0.36824 instead of 0.36864 and the Gate 1 margin
+  0.07065 instead of 0.07057. Matched one lot at a time, the four orders tried
+  (oldest lot, newest lot, largest loss per unit and smallest loss per unit
+  first) put it between 0.3676 and 0.3689 and the margin between 0.0703 and
+  0.0712; oldest lot first gives 0.3688 and 0.0703.
 * **The reality-check p** of section 15 is the studentised stepdown p of the
-  best strategy, not White's original unstudentised statistic.
+  best strategy, not White's original unstudentised statistic. On the same
+  draws White's statistic gives 0.79 for the primary six (0.81 studentised)
+  and 0.60 for all twelve (0.36 studentised); neither comes near 0.05.
 * **Romano-Wolf statistics** are studentised with the plain standard error
   (sd / sqrt(n)) in the sample and in every resample, not with a
   dependence-robust one. The best rule's stepdown t is 1.03 against a
