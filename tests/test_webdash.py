@@ -20,6 +20,27 @@ def test_booleans_become_words_and_keys_survive():
     assert webdash._kv("k", {"x": True}) == [{"table": "k", "key": "x", "value": "yes"}]
 
 
+def test_weekly_samples_carry_real_bar_dates_and_start_at_the_first_bar():
+    days = pd.bdate_range("2024-12-19", "2025-01-03")
+    nav = pd.Series(100.0 + np.arange(len(days)), index=days).loc[:"2024-12-31"]   # the window ends on a Tuesday
+    points = webdash._sample_dates(nav.index)
+    assert [d.strftime("%Y-%m-%d") for d in points] == ["2024-12-19", "2024-12-20", "2024-12-27", "2024-12-31"]
+    assert webdash._sample_dates(nav.index, include_first=False)[0] == pd.Timestamp("2024-12-20")
+    grown = webdash._weekly(nav, points)
+    assert grown[0] == 100.0 and grown[-1] == 108.0                   # rebased at the first bar, not the first Friday
+    assert webdash._weekly(nav / 300.0, points, base=None)[0] == round(100.0 / 300.0, 6)
+
+
+def test_suite_time_is_the_runs_wall_clock(tmp_path):
+    report = tmp_path / "junit.xml"
+    report.write_text('<testsuites><testsuite name="pytest" tests="2" time="5.5">'
+                      '<testcase classname="tests.test_a" name="t1" time="1.0"/>'
+                      '<testcase classname="tests.test_b" name="t2" time="2.0"><skipped/></testcase>'
+                      '</testsuite></testsuites>')
+    j = webdash._junit(report)
+    assert j["time"] == 5.5 and j["total"] == 2 and j["passed"] == 1 and j["skipped"] == 1
+
+
 def test_book_bands_use_the_retirement_rules_month_definition():
     days = pd.bdate_range("2023-12-29", "2024-03-29")
     curve = pd.Series(100.0, index=days)

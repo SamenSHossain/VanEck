@@ -40,11 +40,27 @@ def _csv(name: str, index_cols: int = 1) -> list[dict]:
     return json.loads(df.replace({np.nan: None}).to_json(orient="records"))
 
 
-def _weekly(series: pd.Series, base: float | None = 100.0) -> list:
-    s = series.dropna().resample("W-FRI").last().dropna()
+def _sample_dates(index: pd.Index, include_first: bool = True) -> pd.DatetimeIndex:
+    """Weekly sample points dated by real bars: the last bar of each Friday-ending week (and the first bar).
+
+    A week's sample carries the date of its last bar, so the final sample of 2024 is dated 2024-12-31 rather than
+    with the Friday that ends its week. With ``include_first`` the series also starts at its first bar, which for a
+    NAV curve is the close of the first rebalance."""
+    idx = pd.DatetimeIndex(index)
+    if not len(idx):
+        return idx
+    last = pd.Series(idx, index=idx).groupby(idx.to_period("W-FRI")).last()
+    points = pd.DatetimeIndex(last.to_numpy())
+    return pd.DatetimeIndex(pd.DatetimeIndex([idx[0]]).append(points).unique()) if include_first else points
+
+
+def _weekly(series: pd.Series, points: pd.DatetimeIndex, base: float | None = 100.0) -> list:
+    """``series`` at the sample points, rebased to ``base`` at the first point; six decimals, so a page that rounds
+    for display rounds only once."""
+    s = series.reindex(points)
     if base is not None and len(s):
         s = base * s / s.iloc[0]
-    return [round(float(v), 4) for v in s.to_numpy()]
+    return [None if pd.isna(v) else round(float(v), 6) for v in s.to_numpy()]
 
 
 def _module(classname: str) -> str:
@@ -59,6 +75,8 @@ def _junit(path: Path) -> dict:
     if not path.exists():
         return {"available": False}
     root = ET.parse(path).getroot()
+    suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
+    wall = sum(float(ts.get("time") or 0.0) for ts in suites)
     cases: list[dict[str, Any]] = []
     for tc in root.iter("testcase"):
         outcome = "passed"
@@ -77,7 +95,8 @@ def _junit(path: Path) -> dict:
         f["tests"].append({"name": c["name"], "outcome": c["outcome"], "time": c["time"]})
     return {"available": True, "total": len(cases), "passed": sum(c["outcome"] == "passed" for c in cases),
             "failed": sum(c["outcome"] == "failed" for c in cases), "skipped": sum(c["outcome"] == "skipped" for c in cases),
-            "time": round(sum(c["time"] for c in cases), 1), "files": sorted(files.values(), key=lambda f: f["file"])}
+            "time": round(wall if wall > 0 else sum(c["time"] for c in cases), 1),
+            "files": sorted(files.values(), key=lambda f: f["file"])}
 
 
 def _store_timeline(n: int = 40) -> list[dict]:
@@ -262,9 +281,10 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
     runs = {**base, **strat, **diag}
     kinds = {**{k: "baseline" for k in base}, **{k: "strategy" for k in strat}, **{k: "diagnostic" for k in diag}}
     first = next(iter(runs.values())).pre.nav
-    weeks = [d.strftime("%Y-%m-%d") for d in first.resample("W-FRI").last().dropna().index]
-    nav = {name: {"kind": kinds[name], "pre": _weekly(r.pre.nav), "post": _weekly(r.post.nav),
-                  "dd_post": [round(float(v), 4) for v in metrics.drawdown_series(r.post.nav).resample("W-FRI").last().dropna()]}
+    points = _sample_dates(first.dropna().index)
+    weeks = [d.strftime("%Y-%m-%d") for d in points]
+    nav = {name: {"kind": kinds[name], "pre": _weekly(r.pre.nav, points), "post": _weekly(r.post.nav, points),
+                  "dd_post": _weekly(metrics.drawdown_series(r.post.nav), points, base=None)}
            for name, r in runs.items()}
 
     g0 = run_gate0(md, spec)
@@ -317,7 +337,8 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
     extensions: dict[str, Any] = {n.split("_", 1)[1]: _csv(n) for n in ext_names}
     extensions["results"] = _json(REPORT_DIR / "extensions_results.json")
     extensions["family_alpha"] = design.RW_ALPHA
-    rolling = g0.rolling_avg.resample("W-FRI").last().dropna()
+    rolling_all = g0.rolling_avg.dropna()
+    rolling = rolling_all.reindex(_sample_dates(rolling_all.index, include_first=False))
     return {
         "meta": {"generated_utc": manifest["created_utc"], "git": manifest["git"], "config_hash": manifest["config_hash"],
                  "data_hash": manifest["data_hash"], "data_through": str(md.index[-1].date()),
@@ -330,10 +351,10 @@ def collect(md: MarketData, spec: Spec = SPEC, junit: Path = REPORT_DIR / "junit
                             "cash_yield_mode": spec.cash_yield_mode, "w_min": spec.w_min, "w_max": spec.w_max,
                             "signal_lookback": spec.signal_lookback}},
         "gates": _json(REPORT_DIR / "gates.json"),
-        "gate0": {"corr": {"tickers": list(g0.corr_full.index), "matrix": g0.corr_full.round(3).values.tolist()},
+        "gate0": {"corr": {"tickers": list(g0.corr_full.index), "matrix": g0.corr_full.round(6).values.tolist()},
                   "checks": _records(g0.summary_table(), "check"), "clusters": _records(g0.clusters, "ticker"),
                   "rolling_dates": [d.strftime("%Y-%m-%d") for d in rolling.index],
-                  "rolling_avg": [round(float(v), 4) for v in rolling.to_numpy()], "threshold": spec.gate0_avg_corr_max},
+                  "rolling_avg": [round(float(v), 6) for v in rolling.to_numpy()], "threshold": spec.gate0_avg_corr_max},
         "gate1": {"checks": _records(study.gate1(base, spec), "criterion"), "summary": _records(study.summary_table(base)),
                   "margins": margins, "rolling_edge": edge, "edge_window_days": EDGE_WINDOW,
                   "sensitivities": _csv("sensitivities")},
