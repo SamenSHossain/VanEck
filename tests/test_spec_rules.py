@@ -246,3 +246,96 @@ def test_turnover_is_one_way_and_cash_earns_the_bill_yield():
     n = len(res.nav)
     assert res.nav.iloc[-1] == pytest.approx(1e6 * (1 + 0.0365 / 252) ** (n - 1), rel=1e-12)
 
+
+# --------------------------------------------------------------------------------------------------------- #
+# Decision pipeline and operations (sections 2, 13, 19)
+# --------------------------------------------------------------------------------------------------------- #
+def test_risk_limits_measure_what_section_13_says():
+    from vaneck.risk import Order, pre_trade_checks
+    targets = pd.Series({"A": 0.20, "B": 0.20})
+    equity = 1_000_000.0
+    orders = [Order("A", "BUY", 2000, 100.0), Order("B", "BUY", 4000, 50.0)]       # 400k of buys
+    rep = pre_trade_checks(orders, targets, equity, cash=equity, limits=RiskLimits(max_participation=10.0))
+    checks = {c.name: c for c in rep.checks}
+    assert checks["max_weight"].status != "block"                        # a weight exactly at the cap passes
+    assert checks["turnover_one_way"].value == pytest.approx(0.20)        # 400k / (2 x 1M): one way
+    over = pre_trade_checks(orders, pd.Series({"A": 0.2001}), equity, cash=equity, limits=RiskLimits(max_participation=10.0))
+    assert {c.name: c.status for c in over.checks}["max_weight"] == "block"
+
+
+def test_staleness_warns_after_five_days_and_blocks_after_ten():
+    from vaneck.health import check_market_data
+    md = make_synthetic(n_days=300, seed=11)
+    last = md.index[-1]
+    status = {age: {c.name: c.status for c in check_market_data(md, now=last + pd.Timedelta(days=age)).checks}
+              ["bar_staleness_days"] for age in (5, 6, 10, 11)}
+    assert status == {5: "ok", 6: "warn", 10: "warn", 11: "block"}
+
+
+def test_momentum_is_the_sixty_day_return_and_drift_weights_are_clipped():
+    from vaneck.signals import drift_scores, momentum_scores, signal_drift
+    md = make_synthetic(n_days=300, seed=12)
+    tickers = list(UNIVERSE)
+    px = md.adj_close[tickers]
+    assert np.allclose(momentum_scores(md, tickers).to_numpy(), (px.iloc[-1] / px.iloc[-61] - 1.0).to_numpy())
+    falling = md.adj_close.copy()
+    falling.iloc[-61:] = falling.iloc[-61:].to_numpy() * np.linspace(1.0, 0.7, 61)[:, None]   # mostly down days
+    down = type(md)(adj_close=falling, close=md.close, volume=md.volume, distributions=md.distributions,
+                    macro=md.macro, splits=md.splits)
+    assert (drift_scores(down, tickers) < 0.5).all()
+    pinned = signal_drift(down, tickers).pinned
+    assert len(pinned) == SPEC.top_n and all(v == pytest.approx(SPEC.drift_lo) for v in pinned.values())
+
+
+def test_decision_pipeline_strategy_sees_nothing_after_the_signal_date(tmp_path):
+    from vaneck import live
+    from vaneck.broker import PaperBroker
+    md = make_synthetic(n_days=1300, seed=13)
+    sig = md.index[-30]
+    split = live.decision_split(md, sig)
+    bumped = md.adj_close.copy()
+    bumped.loc[split.exec_date:] *= 1.3                                  # change the execution bar and everything after
+    later = type(md)(adj_close=bumped, close=md.close, volume=md.volume, distributions=md.distributions,
+                     macro=md.macro, splits=md.splits)
+    loose = RiskLimits(max_participation=10.0, max_turnover_one_way=2.0)
+    got = []
+    for i, data in enumerate((md, later)):
+        br = PaperBroker(tmp_path / f"book{i}.json", data)
+        br.init(5_000_000.0, sig)
+        d = live.rebalance(data, "MomentumxMinVar", br, tmp_path / f"dec{i}", as_of=sig, dry_run=True, limits=loose)
+        got.append(d["targets"])
+    assert got[0] == got[1]
+
+
+def test_hold_out_evaluation_stops_at_the_recorded_date(monkeypatch, tmp_path):
+    from dataclasses import replace
+
+    from vaneck import holdout
+    md = make_synthetic(n_days=1500, seed=42)
+    spec = replace(SPEC, fund_start=str(md.index[0].date()), study_end=str(md.index[-261].date()),
+                   holdout_start=str(md.index[-260].date()))
+    seen = []
+    monkeypatch.setattr(holdout, "evaluate", lambda data, *a, **k: seen.append(data.index[-1]) or {"window": []})
+    holdout.unseal(md.window(end=md.index[-100]), "ann", "look", spec, tmp_path, n_boot=10)
+    (tmp_path / holdout.RESULTS).unlink()                               # an evaluation that never finished
+    holdout.complete(md, spec, tmp_path)                                # later data must not enter it
+    assert seen == [md.index[-100], md.index[-100]]
+
+
+def test_a_split_scales_the_tax_lots_with_the_position(tmp_path):
+    from vaneck.broker import PaperBroker
+    from vaneck.risk import Order
+    md = make_synthetic(n_days=400, seed=14)
+    d0, split_day, d1 = md.index[100], md.index[110], md.index[120]
+    br = PaperBroker(tmp_path / "book.json", md, _ZeroCost(SPEC, override_file=None))
+    br.init(1_000_000.0, d0, data_vintage=str(d0.date()))
+    br.submit([Order("SMH", "BUY", 1000, float(md.close.at[d0, "SMH"]))], d0)
+    md.splits.at[split_day, "SMH"] = 2.0
+    try:
+        br.advance_to(d1)
+        assert br.positions()["SMH"] == 2000 and br.ledger.units("SMH") == pytest.approx(2000)
+        br.submit([Order("SMH", "SELL", 2000, float(md.close.at[d1, "SMH"]))], d1)
+        assert "SMH" not in br.positions() and br.ledger.units("SMH") == 0
+    finally:
+        md.splits.at[split_day, "SMH"] = 0.0
+
