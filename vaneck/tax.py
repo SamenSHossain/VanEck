@@ -169,17 +169,22 @@ class TaxLedger:
         self.last_buy[ticker] = date
         g = self._grp(ticker)
         remaining, disallowed_total = units, 0.0
-        for s in self._loss_sales[g]:             # purchase within 30 days *after* a loss sale
+        for s in self._loss_sales[g]:             # purchase on the day of a loss sale or within 30 days after
             if remaining <= 1e-12:
                 break
-            if s.date >= date:
+            if s.date > date:
                 continue
             matched = min(remaining, s.units)
             disallowed = matched * s.loss_per_unit
             s.units -= matched
             remaining -= matched
             disallowed_total += disallowed
-            self._add_realized(s.date.year, disallowed, s.long_term)   # reverse the deduction
+            # reverse the deduction in the loss year; if that year is already settled, charge it in the
+            # year of the purchase instead (SPEC section 6, timing approximation)
+            year = s.date.year
+            if self.settled_through is not None and year <= self.settled_through:
+                year = date.year
+            self._add_realized(year, disallowed, s.long_term)
         lot.basis += disallowed_total
         self._buys[g].append(_Buy(date=date, ticker=ticker, units=remaining, lot=lot))
         if disallowed_total:
@@ -228,10 +233,10 @@ class TaxLedger:
             lt_flag = units_lt >= units_st
             grp = self._grp(ticker)
             to_match = units
-            for b in self._buys[grp]:             # replacement shares bought within 30 days *before* the sale
+            for b in self._buys[grp]:             # replacement shares bought on the sale day or within 30 days before
                 if to_match <= 1e-12:
                     break
-                if b.date >= date or b.units <= 1e-12:
+                if b.date > date or b.units <= 1e-12:
                     continue
                 # only shares from that purchase that are *still held* are replacement shares
                 # (the shares being sold, and shares already sold earlier, do not count; IRS Pub. 550)

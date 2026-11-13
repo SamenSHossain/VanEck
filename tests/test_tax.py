@@ -118,3 +118,60 @@ def test_a_sale_that_leaves_rounding_residue_closes_the_lot():
     led.buy("Y", T("2023-01-03"), 100.0, 1000.0)
     led.sell("Y", T("2023-06-01"), 99.5, 995.0)
     assert led.units("Y") == pytest.approx(0.5)
+
+
+def test_wash_reversal_after_settlement_is_charged_in_the_purchase_year():
+    """SPEC section 6: a reversal triggered after its loss year was settled is charged in the following year.
+
+    A loss realised in December is settled at the first rebalance of January; a repurchase on that day used to
+    book the reversal to the closed year, where it was never taxed.
+    """
+    led = TaxLedger(SPEC, taxed=True)
+    led.buy("X", T("2018-01-02"), 100, 2000.0)
+    led.buy("Y", T("2018-01-02"), 100, 1000.0)
+    led.sell("X", T("2018-12-03"), 100, 1000.0)          # -1000 loss in 2018
+    led.sell("Y", T("2018-12-03"), 100, 3000.0)          # +2000 gain in 2018
+    assert led.settle(T("2019-01-02")) == pytest.approx(0.37 * 1000.0)   # 2018 settled on its net gain
+    led.buy("X", T("2019-01-02"), 100, 1000.0)           # 30 days after the loss: the loss is disallowed
+    assert led.realized_by_year[2018] == pytest.approx(1000.0)          # the closed year is not reopened
+    assert led.realized_by_year[2019] == pytest.approx(1000.0)          # the reversal is charged in 2019
+    assert led.accrued_liability() == pytest.approx(0.37 * 1000.0)
+    assert led.lots["X"][0].basis == pytest.approx(2000.0)              # and the basis still carries it
+    assert led.settle(T("2020-01-02")) == pytest.approx(0.37 * 1000.0)
+
+
+def test_same_day_purchase_counts_on_both_sides_of_the_wash_sale_rule():
+    """Within 30 days before or after includes the day of the sale itself (substantially-identical group)."""
+    spec = Spec(wash_sale_groups=(("X", "XX"),))
+    led = TaxLedger(spec, taxed=True)
+    led.buy("X", T("2020-01-02"), 100, 2000.0)
+    led.sell("X", T("2020-06-01"), 100, 1000.0)          # -1000 loss
+    led.buy("XX", T("2020-06-01"), 100, 1000.0)          # bought the same day, after the sale
+    assert led.realized_by_year[2020] == pytest.approx(0.0)
+    assert led.basis("XX") == pytest.approx(2000.0)
+    led2 = TaxLedger(spec, taxed=True)
+    led2.buy("X", T("2020-01-02"), 100, 2000.0)
+    led2.buy("XX", T("2020-06-01"), 100, 1000.0)         # bought the same day, before the sale
+    assert led2.sell("X", T("2020-06-01"), 100, 1000.0) == pytest.approx(0.0)
+    assert led2.basis("XX") == pytest.approx(2000.0)
+
+
+def test_wash_window_boundary_is_thirty_days_on_both_sides():
+    led = TaxLedger(SPEC, taxed=True)
+    led.buy("X", T("2020-01-02"), 100, 2000.0)
+    led.sell("X", T("2020-06-01"), 100, 1000.0)
+    led.buy("X", T("2020-07-01"), 100, 1000.0)           # day 30: disallowed
+    assert led.realized_by_year[2020] == pytest.approx(0.0)
+    led = TaxLedger(SPEC, taxed=True)
+    led.buy("X", T("2020-01-02"), 100, 2000.0)
+    led.sell("X", T("2020-06-01"), 100, 1000.0)
+    led.buy("X", T("2020-07-02"), 100, 1000.0)           # day 31: allowed
+    assert led.realized_by_year[2020] == pytest.approx(-1000.0)
+    led = TaxLedger(SPEC, taxed=True)
+    led.buy("X", T("2020-01-02"), 100, 2000.0)
+    led.buy("X", T("2020-05-02"), 100, 1200.0)           # 30 days before the sale: replacement shares
+    assert led.sell("X", T("2020-06-01"), 100, 1000.0) == pytest.approx(0.0)
+    led = TaxLedger(SPEC, taxed=True)
+    led.buy("X", T("2020-01-02"), 100, 2000.0)
+    led.buy("X", T("2020-05-01"), 100, 1200.0)           # 31 days before: not
+    assert led.sell("X", T("2020-06-01"), 100, 1000.0) == pytest.approx(-1000.0)
