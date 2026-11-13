@@ -89,8 +89,8 @@ rules 0.35 to 0.36. No outcome changed.
 | Diagnostics, annual test | 5% to 9% | 3.5% to 6% |
 | Drift rules without the overlay, monthly paired test (n = 90, plain standard deviation), Bonferroni | about 4% | about 3% |
 
-The plan's decisive test needed an edge of 10% to 14% a year to reject, about as
-large as the whole premium SPY earned over cash in this window (about 12% a
+The plan's decisive test needed a true edge of 10% to 14% a year to reject with
+80% power, about as large as the whole premium SPY earned over cash in this window (about 12% a
 year). The best rule in the study (Drift x MaxSharpe without overlay, +1.4% a
 year over 60/40) would need 65 years of data under the annual test.
 
@@ -103,8 +103,9 @@ year over 60/40) would need 65 years of data under the annual test.
 | Reality-check p, primary family / all 12 | 0.81 / 0.36 |
 
 The reality-check p is the studentised version SPEC section 15 defines: the
-best strategy's stepdown-adjusted p. White's original, unstudentised statistic
-on the same draws gives larger values.
+best strategy's stepdown-adjusted p. On the same draws White's original,
+unstudentised statistic gives a p of 0.79 for the primary family, slightly
+below the studentised 0.81, and 0.60 for all twelve, well above 0.36.
 
 Reading: the Drift rules are not refuted and not demonstrated. A deflated
 Sharpe of 0.74 says that, allowing for twelve trials, there is about a 26%
@@ -116,7 +117,7 @@ test. For future work the SPEC (section 15) proposes that a monthly HAC test
 with Romano-Wolf control replace the annual Bonferroni test on seven annual
 points; FINDINGS.md section 6 adds pre-registering the effect size.
 
-## 3. Capacity: small, and set by building the position
+## 3. Capacity: $3M for the baselines, set mainly by building the position; below $1M for the rules, set by trading costs
 
 | Portfolio | Friction drag at $10M | Tracking error at $10M | Capacity under the pre-registered limits (drag <= 25 bps, tracking <= 50 bps) | Binding constraint |
 |---|---|---|---|---|
@@ -128,8 +129,10 @@ points; FINDINGS.md section 6 adds pre-registering the effect size.
 * **The baselines are liquidity-bound, not cost-bound.** Even at $1 billion the
   drag is under 11 bps because the participation cap simply refuses the trades;
   what grows is the tracking error, from 9 bps at $1M to 780 bps at $1B for
-  equal weight (4 to 640 bps for 60/40 VanEck), as HAP (about $0.5M a day over
-  2017-2024) and then PFXF and OUNZ cannot be filled. At the plan's $10M the cap
+  equal weight (4 to 640 bps for 60/40 VanEck), as the cap cuts orders in the
+  thinnest funds: first HAP (about $0.6M a day on average over 2017-2024) and
+  OUNZ (about $0.4M a day when the book started in June 2017), then REMX, FLTR
+  and PFXF; 60/40 VanEck holds only HAP and REMX of these. At the plan's $10M the cap
   already trims more than a tenth of trades (10.6% for equal weight, 11.5% for
   60/40 VanEck).
 * **Most of that tracking error comes from building the position.** The

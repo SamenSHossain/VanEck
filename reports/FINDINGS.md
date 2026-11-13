@@ -4,8 +4,9 @@
 > already sold, no longer count as their own replacement). Gate 1 numbers are
 > unchanged; Phase 2 post-tax Sharpe ratios moved by at most 0.01.
 >
-> Revision 2026-11-13: an independent verification pass re-derived every figure
-> in this document. Corrections to the engine (`docs/SPEC.md` section 20) moved
+> Revision 2026-11-13: the figures in this document were checked again against
+> the code, the data and the regenerated tables. The check reran the study's own
+> code and was not an outside review. Corrections to the engine (`docs/SPEC.md` section 20) moved
 > some Phase 2 figures in the second or third decimal; no gate, test outcome or
 > verdict changed. Several statements were corrected or qualified. Every figure
 > below is current.
@@ -13,10 +14,14 @@
 Study window: 9 VanEck funds, out-of-sample 2017-06-01 to 2024-12-31 (91
 monthly rebalances, 7 full calendar years), $10M taxable account, costs tiered
 by liquidity, 37% tax with FIFO lots and wash-sale rules, cash at the 13-week
-T-bill rate. The rules, thresholds and tests were written into `docs/SPEC.md`
-before the backtests were run. That file was committed together with the first
-results, so the repository history alone cannot show the order; rules and
-corrections added after results were known are marked in SPEC section 20.
+T-bill rate. The rules, thresholds and tests are set out in `docs/SPEC.md`. By
+its own account they were fixed before the results they govern, and its opening
+paragraphs say which rules and text were added or changed afterwards. That file
+was committed together with the first results, in commit 7e4ff71, so the
+repository history cannot confirm that the rules came first. The operational,
+extension and retirement rules of sections 13 to 17 were added after the main
+results, and the wash-sale correction of 2026-11-08 noted above is recorded
+here rather than in the SPEC.
 Generated tables and figures: `REPORT.md`.
 
 ## 1. Bottom line
@@ -183,12 +188,23 @@ In Crisis every overlay strategy's drawdown is shallower than equal weight's
 that comes from the optimizers rather than the overlay: against the same rules
 without it, the overlay saves 2 to 7 points of Crisis drawdown, and it lowers
 every rule's Sharpe in Crisis, Correction and Neutral periods. In Bull periods
-it costs nothing:
+it leaves Sharpe about unchanged, from 0.005 lower to 0.07 higher, but every
+rule earns 0.8 to 1.3 points a year less: on about one Bull day in five the
+overlay still had 25% in cash after a Correction reading at the previous
+month-end. Two regimes need a closer look:
 
-* **Correction (22% of days)** flips from a profitable regime for equal weight
-  (Sharpe 0.72, third of four) to a losing one for every overlay strategy,
-  because the rule parks 25% in cash during what were, in this window, mostly
-  mild pullbacks inside a bull market.
+* **Correction (22% of days)** is a profitable regime for equal weight (Sharpe
+  0.72, third of four), but every overlay strategy earns less than cash there,
+  and five of the six lose money. The 25% cash rule is not the cause: on the 226
+  Correction days when it was in force, every rule lost money with or without
+  it (2.6% to 6.4% a year with it, 5.3% to 9.3% without), so it reduced the
+  losses. The difference comes from 80 Correction days on which the overlay
+  still held the Crisis hedge basket, chosen at a month-end Crisis reading,
+  while the funds rallied: 20 days in 2019, 12 in 2020, 36 in 2021 and 12 in
+  2022. Over those 80 days equal weight gained 29%, the rules without the
+  overlay 18% to 30% and the overlay versions 2% to 5%. On the other 347
+  Correction days every overlay strategy lost less than equal weight and less
+  than the same rule without the overlay.
 * **Crisis entry and exit are late by design.** Regimes are read at month-end
   and acted on the next trading day. In 2020 the overlay was in "hedges only"
   from 2 March until 3 August and again from 1 September until 1 December,
@@ -251,8 +267,10 @@ structural levers rather than at signal research:
 2. **Decide what the position limits are for.** Every rule was capped at 20% in
    the one fund that drove the window's return. That cap is a sensible risk
    control, but with it in place the study is effectively asking whether
-   re-weighting the other eight funds can beat a static mix, and the answer was
-   no.
+   re-weighting nine funds, none set above 20%, can beat a static mix, and the
+   answer was no. Only three rules ever set SMH at the cap: the two Momentum
+   rules, each at 33 of the 91 rebalances with the overlay and 52 without, and
+   None x MaxSharpe, at 19 and 27.
 3. **Broader universe or different question.** The plan's own fallback (a
    600+ ETF universe) addresses the real limitation: nine funds offer
    five themes, and five themes offer little for a monthly allocation rule to
@@ -262,10 +280,15 @@ structural levers rather than at signal research:
 ## 9. Caveats
 
 * Yahoo Finance data, which can contain adjustment errors; the data quality
-  checks found none in the study window. FRED cross-checks the macro inputs, and
-  peer ETFs and a corporate-actions audit check the fund data, but those checks
-  cover recent years; no independent second price feed covers the nine funds in
-  the study window.
+  checks found none in the study window. FRED cross-checks four of the five
+  macro inputs, all but the S&P GSCI, over the last 750 trading days, and each
+  fund's daily returns are compared with a peer ETF's over the last 250; on the
+  cache, which ends in November 2026, the FRED check reaches back only to late
+  2023 and the peer check starts after the study window. A corporate-actions
+  audit checks Yahoo's adjustment factors against Yahoo's own distribution
+  records over the whole history of each of the nine funds and found no
+  mismatch, but it compares Yahoo with itself; no independent second price feed
+  covers the nine funds in the study window.
 * Spreads are tiered assumptions calibrated to average dollar volume, not live
   broker quotes; `data/spreads_override.csv` accepts the latter. Market impact
   is not modelled in the main study (extension 3 models it); at $10M the
@@ -277,9 +300,10 @@ structural levers rather than at signal research:
 * The CRB index is proxied by the S&P GSCI, which is production-weighted and so
   more energy-heavy.
 * The composition rule "signal pins its favoured funds, optimizer allocates the
-  rest" is this implementation's resolution of a step the plan left undefined;
-  it was written into `docs/SPEC.md` section 8 before the backtests were run,
-  and its tie rule was added on 2026-11-10, after the results were known.
+  rest" is this implementation's resolution of a step the plan left undefined.
+  It appears in section 8 of `docs/SPEC.md` as first committed in 7e4ff71, the
+  same commit as the first results, and its tie rule was added on 2026-11-10,
+  after the results were known.
 * All results are one draw of history, dominated by a semiconductor supercycle
   and by T-bill rates that went from near zero (2020-2021) to 5% (2023-2024),
   averaging 2.2%; the regime overlay in particular would look different in a
@@ -302,6 +326,15 @@ is built, tracking error at $10M is under 10 bps a year.
 ```bash
 pip install -r requirements.txt
 python -m pytest -q
-python -m vaneck all --force       # sections 1-9 and REPORT.md
-python -m vaneck extensions        # section 10 and EXTENSIONS_FINDINGS.md
+python -m vaneck all --force       # writes REPORT.md and the main study's tables and figures
+python -m vaneck extensions        # writes EXTENSIONS.md and the extension tables and figures
 ```
+
+This file and `EXTENSIONS_FINDINGS.md` are written by hand. The first command
+supplies most figures in sections 1 to 7. The second supplies most of section
+10, the years of data needed in section 6 and the tax-aware gains in section 8.
+Some figures were computed separately for the 2026-11-13 check and appear in
+neither output, among them the taxes that count the 2024 liability, the
+quarterly lift for 60/40 VanEck, equal weight's regime returns with the regime
+read at the previous close, HAP's average daily dollar volume, the average
+T-bill rate and the tracking error once the book is built.
