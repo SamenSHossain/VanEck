@@ -23,8 +23,10 @@ jobs:
         run: python -m mypy
       - name: unit, property, adversarial and golden tests
         run: python -m pytest -q
-      - name: cross-validation against the cached secondary sources
-        run: python -m vaneck check --cross --json > /tmp/health.json || test $? -ne 2
+      # Staleness is judged against the cache's last bar: the committed cache is frozen, so the wall clock would
+      # turn this step red a few days after every refresh. Any non-zero exit fails the step, a crash included.
+      - name: data health and cross-validation of the committed cache
+        run: python -m vaneck check --cross --json --now data > /tmp/health.json
       - name: deterministic dry-run decision on the committed data cache
         run: |
           python -m vaneck rebalance --strategy EqualWeight --as-of 2024-12-31 \

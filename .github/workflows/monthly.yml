@@ -1,18 +1,26 @@
 name: monthly-cycle
 
-# Automation for the monthly cycle: refresh data, run the health gate, produce a
-# dry-run decision and the monitor report as artifacts. Nothing is committed and
-# nothing is executed; a human reviews the decision record before any --submit.
+# Automation for the monthly cycle: refresh data, run the health gate and produce a dry-run decision
+# as artifacts. Nothing is committed and nothing is executed; a human reviews the decision record before
+# any --submit.
+#
+# The 2025+ hold-out is sealed (docs/SPEC.md section 19). The dry run therefore uses its own fresh book
+# instead of the committed 2024 rehearsal book, which rebalance would roll forward through the sealed
+# period, and the paper book is monitored only once the hold-out has been opened with its logged record.
 on:
   schedule:
-    - cron: "30 22 1 * *"
+    - cron: "30 22 1 * *"   # the 1st at 22:30 UTC, after the first trading day's close in most months
   workflow_dispatch:
 
 jobs:
   cycle:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -22,9 +30,13 @@ jobs:
         run: python -m vaneck fetch --force --secondary
       - name: data health gate
         run: python -m vaneck check --json --cross
-      - name: dry-run decision (latest bar)
-        run: python -m vaneck --log-json rebalance --strategy EqualWeight --init-cash 10000000
-      - name: monitor the paper book
+      - name: dry-run decision (signal at the last month-end close, SPEC section 2)
+        run: |
+          ASOF=$(python -c "import pandas as pd; from vaneck import data; i = data.build_market_data().index; print(i[i < pd.Timestamp.now().normalize().replace(day=1)][-1].date())")
+          python -m vaneck --log-json rebalance --strategy EqualWeight --as-of "$ASOF" --init-cash 10000000 \
+            --book /tmp/monthly/book.json --decisions /tmp/monthly/decisions
+      - name: monitor the paper book (only after the hold-out is opened)
+        if: hashFiles('reports/holdout/unsealed.json') != ''
         continue-on-error: true
         run: python -m vaneck monitor --strategy EqualWeight --mark
       - uses: actions/upload-artifact@v4
@@ -35,4 +47,5 @@ jobs:
             reports/health.json
             reports/monitor_*.md
             reports/monitor_*.json
-            paper/decisions
+            /tmp/monthly/decisions
+          if-no-files-found: ignore

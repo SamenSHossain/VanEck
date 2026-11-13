@@ -344,7 +344,8 @@ def _print_decision(d: dict) -> None:
 
 def cmd_check(args):
     md = data.build_market_data()
-    rep = health.check_market_data(md)
+    now = None if args.now is None else md.index[-1] if args.now == "data" else pd.Timestamp(args.now)
+    rep = health.check_market_data(md, now=now)
     payload = rep.to_dict()
     if args.cross:
         from . import crossval, sources
@@ -701,6 +702,8 @@ def main(argv=None) -> int:
     c = sub.add_parser("check", help="data health report (exit 2 on a blocking problem)")
     c.add_argument("--json", action="store_true")
     c.add_argument("--cross", action="store_true", help="add cross-validation: FRED macro, peer divergence, corporate actions")
+    c.add_argument("--now", default=None, help="judge staleness against this date instead of the clock; 'data' uses the "
+                   "last bar (for checks of a frozen cache, such as CI)")
     c.set_defaults(func=cmd_check)
 
     book_default, dec_default = str(live.PAPER_DIR / "book.json"), str(live.PAPER_DIR / "decisions")
