@@ -69,8 +69,9 @@ requested before the execution day's close is in the data).
 | cost reserve | 10 bps of equity held back from targets (with `--policy`, 10 bps of the cash balance) | - |
 
 The participation limit is the one that binds in practice: at $10M, the
-rehearsal's first equal-weight order for HAP was 81% of its trailing 60-day
-dollar volume, eight times the 10% cap, so the book carries a persistent
+rehearsal's first equal-weight order for HAP was 81% of its average daily
+dollar volume over the 60 trading days before the signal date, eight times the
+10% cap, so the book carries a persistent
 underweight that the monitor reports as an implementation gap.
 
 ## Health checks (`vaneck/health.py`)
@@ -101,9 +102,12 @@ out completely, and it survives a reload of the book.
   a larger gap is an engine or data problem and raises an alert.
 - **Implementation gap.** The simulator is fed the intended targets, once
   without and once with the live participation cap. The uncapped difference is
-  the cost of the risk controls; the capped difference should be small, from
-  whole-share rounding, dividends held as cash, the cost reserve and the
-  minimum order (-0.13% in the 2024 rehearsal, not decomposed further).
+  the cost of the risk controls; the capped difference should be small. In the
+  2024 rehearsal it was -0.13%, mostly because the paper book sizes and caps
+  its orders at signal-date prices and sets the cap against a volume average
+  that ends one day earlier than the research engine's; whole-share rounding,
+  the cost reserve, the minimum order and dividends held as cash each moved it
+  by about 0.01 points or less.
 - **Book hygiene.** Current drawdown versus the halt level, blocked decisions,
   rebalances where orders were scaled, and days since the last decision.
 
@@ -195,9 +199,15 @@ blocked or alerting), and `python -m vaneck dashboard` renders
 pipeline would do with an order right now: `open`, `sell-only` (a retirement
 flag refuses new risk) or `blocked` (the halt flag, a blocking data check, or
 signing required with no key). It is computed by `vaneck/opstate.py`, which
-reads the same switches as the pipeline (data health gate, halt flag,
-retirement flags, approval signing, risk limits), then the monitor and the
-last decision for attention. A blocking `check`, a `rebalance` that ends
+reads the halt flag, the retirement flags, approval signing and the risk limits
+from the same files and environment variables as the pipeline, and the monitor
+and the last decision for attention. Its data health gate is the latest
+recorded `check`, including the `--cross` layers when it was run with them.
+`rebalance` never reads that record: it runs its own health check on the data
+up to the signal date, without the `--cross` layers, so a block found only by
+`check --cross` makes `status` say `blocked` but does not by itself stop
+`rebalance --submit`, and a stale or missing record can leave `status` at
+`open` while the decision's own check blocks. A blocking `check`, a `rebalance` that ends
 `blocked` or `awaiting_exec_bar`, any alert from `monitor` and any break found
 by `reconcile` are delivered to the webhook in `VANECK_WEBHOOK_URL`
 (Slack-compatible JSON) and always appended to `state/alerts.log`; `replay`,

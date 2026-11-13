@@ -136,20 +136,35 @@ points; FINDINGS.md section 6 adds pre-registering the effect size.
   already trims more than a tenth of trades (10.6% for equal weight, 11.5% for
   60/40 VanEck).
 * **Most of that tracking error comes from building the position.** The
-  measure covers the whole window from an all-cash start. Excluding the first
-  12 months, equal weight's tracking error at $10M is 7.4 bps a year: once
-  built, the book follows its targets closely, and the capacity limit is really
-  the time it takes to fund a new account under a 10% volume cap.
+  measure covers the whole window from an all-cash start, and under a 10%
+  volume cap a larger account takes longer to fund. Excluding the first 12
+  months, equal weight's tracking error at $10M is 7.4 bps a year (10.8 for
+  60/40 VanEck): once built, the book follows its targets closely, and the
+  capacity limit is really the time it takes to fund a new account under a 10%
+  volume cap. Larger books take years to build. At $30M equal weight's HAP
+  holding is on average 4.9 to 7.8 points below its 11.1% target in each year
+  from 2018 to 2021 and first comes within a point of it in October 2022, so
+  excluding the first 12 months still leaves 125 bps a year (132 for 60/40
+  VanEck). From $100M neither portfolio's HAP holding ever comes within a point
+  of its target. In a rerun with the cap lifted on the first execution date
+  only, so that the book starts at its targets, tracking error is 24 bps a year
+  for equal weight and 30 for 60/40 VanEck at $30M, inside the 50 bps limit,
+  but about 90 and 100 bps at $100M.
 * **The rules are cost-bound at any size.** One to two times annual turnover
   costs 15 to 32 bps a year in spreads and slippage at $1M, and square-root
   impact in the thin funds lifts that to 36 to 74 bps, above the 25 bps limit
   even at $1M. Drift x MinVar would pass on spreads alone; Momentum x MaxSharpe
   would not. Capacity for these rules is a turnover problem, not a size problem.
-* **Research and execution now agree.** With the same participation cap applied
-  in the research engine, the 2024 paper book differs from research by -0.13%
-  cumulative (not decomposed; likely whole-share rounding, dividends held as
-  cash, the 10 bps cost reserve and the $500 minimum order), against +1.25% when
-  research ignored the cap. The monitor reports both lines.
+* **Research and execution now agree.** With the same 10% participation cap
+  applied in the research engine, the 2024 paper book differs from research by
+  -0.13% cumulative, against +1.25% when research ignored the cap. The monitor
+  reports both lines. A one-off rerun that switched each remaining difference
+  off in turn puts most of the -0.13% on two inputs: the paper book sizes and
+  caps its orders at signal-date prices, and it sets the cap against an average
+  volume that ends one day earlier than the one research uses. Without these
+  two the gap is about -0.01%; the 10 bps cost reserve, whole-share rounding,
+  the $500 minimum order and holding dividends as cash each move it by about
+  0.01 points or less.
 
 ## What changed in the package
 
@@ -166,16 +181,26 @@ points; FINDINGS.md section 6 adds pre-registering the effect size.
 * Golden regression test: 248 key values (the Gate 1 baselines, the 12
   strategies, the policy ladder and the capacity curve) are checked against
   frozen copies at a relative tolerance of 1e-6. The refactored engine
-  reproduced the original Gate 1 baselines and no-overlay strategies exactly;
-  the regime-overlay strategies changed with the refactor and later fixes and
-  were refrozen each time (SPEC section 20).
+  reproduced the original Gate 1 baselines and no-overlay strategies within
+  that tolerance, while the post-tax figures of the regime-overlay strategies
+  changed and their pre-tax figures did not. Only the Gate 1 baselines were
+  frozen then. The full set was first frozen with the wash-sale correction of
+  2026-11-08, which moved post-tax figures of strategies with and without the
+  overlay and is recorded in FINDINGS.md. It was refrozen with the no-rebuy
+  correction and the tie rules of 2026-11-10, the day-30 harvest boundary of
+  2026-11-11 and the late wash-sale reversals of 2026-11-13, all described in
+  SPEC sections 14 and 20. The tie rules and the late reversals moved
+  strategies with and without the overlay; the other two moved only P3 values
+  of the policy ladder. The Gate 1 baselines have not moved since the original
+  study.
 
 ## Reproduce
 
 ```bash
 python -m vaneck extensions            # ~1 minute; writes reports/EXTENSIONS.md and tables/figures
-# the 2024 paper book of section 3 (legacy policy), written to a scratch folder so the committed book is untouched
-python -m vaneck replay --strategy EqualWeight --start 2024-01-01 --end 2024-12-31 \
+# the 2024 paper book of section 3 (legacy policy), written to a scratch folder so the committed book is untouched;
+# delete the folder before every run, or the months the last run submitted come out duplicate and nothing is bought
+rm -rf /tmp/replay && python -m vaneck replay --strategy EqualWeight --start 2024-01-01 --end 2024-12-31 \
   --book /tmp/replay/book.json --decisions /tmp/replay/decisions --out /tmp/replay
-# add --policy P2 to rehearse the drift-band policy instead (different figures)
+# for the drift-band policy, delete the folder again and add --policy P2 (different figures)
 ```

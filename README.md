@@ -32,7 +32,7 @@ in [`docs/SPEC.md`](docs/SPEC.md) section 20.
 
 ```bash
 pip install -r requirements.txt
-make test            # 151 tests: lookahead + leak canary, pre-registered rules, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
+make test            # 155 tests: lookahead + leak canary, pre-registered rules, property-based ledger/planner, goldens, tax lots, risk, venue adapter, approvals
 make lint            # ruff
 make typecheck       # python -m mypy, with pandas-stubs
 make report          # Gate 0 -> Gate 1 -> Phase 2 (+ sensitivities), writes reports/
@@ -69,7 +69,7 @@ for the runbook.
 | `python -m vaneck paper init|status|reset` | manage the paper book |
 | `python -m vaneck extensions` | the three pre-registered extensions; writes `reports/EXTENSIONS.md` |
 | `python -m vaneck rebalance --strategy S [--as-of D] [--submit] [--policy P2]` | one decision: health, targets, orders, risk checks, decision record; dry run unless `--submit`; optional execution policy P0-P3 |
-| `python -m vaneck replay --strategy S --start D --end D [--policy P2]` | operational rehearsal of the monthly cycle through the paper broker over a past window; it writes to the committed paper book unless `--book` and `--decisions` point elsewhere |
+| `python -m vaneck replay --strategy S --start D --end D [--policy P2]` | operational rehearsal of the monthly cycle through the paper broker over a past window. It deletes and rebuilds the book at `--book` but keeps the records in `--decisions`, and a month that already has a submitted record there comes out `duplicate` and is not traded, so point `--book`, `--decisions` and `--out` at an empty folder; with the defaults it would rebuild the committed book from the committed records and leave it in cash |
 | `python -m vaneck monitor --strategy S [--mark]` | reconcile the paper book with the research engine; exit code 1 on alerts; `--mark` first rolls the book to the latest bar, so leave it off for the committed 2024 book while the hold-out is sealed |
 
 Add `--log-json` before the command for structured logs.
@@ -81,7 +81,7 @@ extensions' thresholds are set in `vaneck/execution.py`, `vaneck/liquidity.py`
 and `vaneck/design.py`. The pre-trade and data-health limits live in
 `vaneck/risk.py` and `vaneck/health.py`, and the monitoring, cross-validation,
 reconciliation and retirement thresholds in `vaneck/monitor.py`,
-`vaneck/crossval.py`, `vaneck/livebroker.py` and `vaneck/retire.py`. The
+`vaneck/crossval.py`, `vaneck/livebroker.py`, `vaneck/reconcile.py` and `vaneck/retire.py`. The
 research rules and the pre-trade, health and retirement limits are documented,
 with the reasons for each resolved ambiguity, in [`docs/SPEC.md`](docs/SPEC.md).
 Changing a value after looking at results is a protocol violation; the changes
@@ -134,7 +134,7 @@ vaneck/
   shortfall.py   implementation shortfall per decision: distance to target, capped orders, explicit and delay cost
   holdout.py     the sealed 2025+ hold-out: status, one-time logged opening, frozen results
   cli.py         python -m vaneck ...
-tests/           151 tests across all layers incl. the pre-registered rules, hypothesis property tests, a leak canary, goldens and a fake venue
+tests/           155 tests across all layers incl. the pre-registered rules, hypothesis property tests, a leak canary, goldens and a fake venue
 data/raw/        cached daily history per ticker incl. the 12 harvesting substitutes
 data/secondary/  FRED series for cross-validation
 docs/            the plan, the pre-registered SPEC, the operations runbook

@@ -67,8 +67,9 @@ problem.
 Taxes are paid at the first rebalance of the following year, so the last column
 covers tax years 2017 to 2023. The 2024 liability is already deducted from the
 post-tax NAV; counting it, taxes are 3.0% of NAV a year for equal weight, 2.8%
-for 60/40 VanEck, 1.7% for 60/40 SPY/BND and 0.3% for buy-and-hold SMH, which
-never rebalances and so never pays.
+for 60/40 VanEck and 1.7% for 60/40 SPY/BND. Buy-and-hold SMH never rebalances,
+so it settles no tax inside the window; all of its 2017 to 2024 distribution
+tax is accrued, and counting it gives 0.3%.
 
 | Gate 1 criterion | Value | Threshold | Result |
 |---|---|---|---|

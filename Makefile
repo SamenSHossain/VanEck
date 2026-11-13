@@ -14,8 +14,10 @@ report:
 
 # replay, rebalance and monitor never touch the committed 2024 paper book past 2024-12-31: the 2025+ hold-out is
 # sealed (docs/SPEC.md section 19), and a decision on that book would mark it through the sealed period.
+# replay keeps the decision records already in its folder, and on a second run every month would come out duplicate
+# with nothing bought, so the folder is cleared first.
 replay:
-	python -m vaneck replay --strategy EqualWeight --start 2024-01-01 --end 2024-12-31 \
+	rm -rf /tmp/vaneck-replay && python -m vaneck replay --strategy EqualWeight --start 2024-01-01 --end 2024-12-31 \
 	  --book /tmp/vaneck-replay/book.json --decisions /tmp/vaneck-replay/decisions --out /tmp/vaneck-replay
 
 rebalance:
