@@ -59,8 +59,16 @@ def capacity_curve(md: MarketData, splits: list[Split], spec: Spec = SPEC, aums=
                 "capped_trade_share": float(sim.capped.sum() / n_trades) if (n_trades and sim.capped is not None) else 0.0,
             })
     curve = pd.DataFrame(rows).set_index(["portfolio", "aum"])
+    return curve, capacity_table(curve, drag_limit_bps, te_limit_bps)
+
+
+def capacity_table(curve: pd.DataFrame, drag_limit_bps: float, te_limit_bps: float) -> pd.DataFrame:
+    """SPEC section 16: capacity is the largest tested AUM at which drag AND tracking error are within limits.
+
+    'binding' names every limit breached anywhere on the grid.
+    """
     cap_rows = []
-    for pname in portfolios:
+    for pname in curve.index.get_level_values("portfolio").unique():
         c = curve.loc[pname]
         drag_hit = bool((c["drag_bps_yr"] > drag_limit_bps).any())
         te_hit = bool((c["tracking_error_bps_yr"] > te_limit_bps).any())
@@ -68,4 +76,4 @@ def capacity_curve(md: MarketData, splits: list[Split], spec: Spec = SPEC, aums=
         cap_rows.append({"portfolio": pname, "capacity_aum": float(ok.index.max()) if len(ok) else 0.0,
                          "drag_limit_bps": drag_limit_bps, "te_limit_bps": te_limit_bps,
                          "binding": "+".join(x for x, hit in (("drag", drag_hit), ("tracking", te_hit)) if hit)})
-    return curve, pd.DataFrame(cap_rows).set_index("portfolio")
+    return pd.DataFrame(cap_rows).set_index("portfolio")

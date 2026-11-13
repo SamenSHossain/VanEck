@@ -59,3 +59,16 @@ def test_expectations_from_research_engine(synth):
     exp = retire.compute_expectations(synth, "EqualWeight", spec)
     assert exp["n_months"] > 12 and exp["monthly_return_p5"] < exp["monthly_return_median"]
     assert exp["max_drawdown"] < 0 and exp["drawdown_retire_level"] < exp["max_drawdown"]
+    assert exp["drawdown_retire_level"] == 1.25 * exp["max_drawdown"]          # SPEC section 17, R2
+
+
+def test_r3_reviews_after_three_rolling_sharpes_below_the_backtest_fifth_percentile():
+    rf = pd.Series(0.0, index=pd.bdate_range("2022-01-01", "2026-01-01"))
+    poor = _curve([-0.01, -0.03] * 8)                   # 16 months: every 12-month window has a Sharpe near -7
+    by = {r.rule: r for r in retire.evaluate(poor, rf, EXP, monitor_history=[])}
+    assert by["R3_rolling_sharpe"].status == "review" and by["R3_rolling_sharpe"].threshold == -0.5
+    good = _curve([0.01, 0.03] * 8)
+    assert {r.rule: r.status for r in retire.evaluate(good, rf, EXP, monitor_history=[])}["R3_rolling_sharpe"] == "ok"
+    short = _curve([-0.01, -0.03] * 7)                  # 14 months give only 3 rolling values: still enough
+    assert {r.rule: r.status for r in retire.evaluate(short, rf, EXP, monitor_history=[])}["R3_rolling_sharpe"] == "review"
+

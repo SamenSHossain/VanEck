@@ -17,14 +17,13 @@ def test_corporate_actions_consistent_then_broken(synth):
     checks, tbl = corporate_actions_audit(synth, ["SMH", "GDX"])
     assert checks[0].status == OK and (tbl["unmatched_jumps"] == 0).all()
     d = synth.index[-40]
-    saved = synth.adj_close.at[d, "SMH"]
+    saved = synth.adj_close.loc[:d, "SMH"].copy()
     synth.adj_close.loc[:d, "SMH"] *= 0.98          # an adjustment with no recorded distribution
     try:
         checks, tbl = corporate_actions_audit(synth, ["SMH"])
         assert checks[0].status == BLOCK and tbl.loc["SMH", "unmatched_jumps"] >= 1
     finally:
-        synth.adj_close.loc[:d, "SMH"] /= 0.98
-        synth.adj_close.at[d, "SMH"] = saved
+        synth.adj_close.loc[:d, "SMH"] = saved          # exact values, not a division by 0.98
 
 
 def test_peer_divergence_flags_a_bad_print(synth):

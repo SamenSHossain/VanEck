@@ -1,7 +1,7 @@
 """Property-based invariants for the tax ledger and the execution planner."""
 import pandas as pd
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, example, given, settings
 from hypothesis import strategies as st
 
 from vaneck.config import SPEC
@@ -47,6 +47,9 @@ HOLD = st.lists(st.floats(0, 5000), min_size=3, max_size=3)
 
 @settings(max_examples=200, deadline=None)
 @given(w=WEIGHTS, h=HOLD, cash=st.floats(0, 20000), band=st.sampled_from([None, 0.2]), harvest=st.booleans())
+# in-band overweights larger than the unallocated cash: random draws rarely reach this, and dropping the
+# planner's no-leverage scaling then buys 700 against 500 of cash
+@example(w=[0.3, 0.3, 0.3], h=[3600.0, 2300.0, 3600.0], cash=500.0, band=0.2, harvest=False)
 def test_planner_never_borrows_or_oversells(w, h, cash, band, harvest):
     tickers = ["A", "B", "C"]
     prices = pd.Series({"A": 100.0, "B": 50.0, "C": 20.0, "S": 10.0})

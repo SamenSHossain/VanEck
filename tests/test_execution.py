@@ -135,22 +135,26 @@ def _step_market(steps: dict[str, list[tuple[str, float]]]) -> MarketData:
 
 
 def test_simulator_keeps_the_no_rebuy_window_after_a_fund_is_sold_out():
-    """X is harvested into S; 30 days later S qualifies, but swapping back would rebuy X inside its window."""
+    """X is harvested into S, S is then sold, and the group is bought again inside X's 31-day window.
+
+    Nothing else blocks the purchase: no harvest is involved at the third date, so only the no-rebuy window
+    can steer the buy from X to S. Without the ledger's loss-sale memory the simulator bought X back.
+    """
     md = _step_market({"X": [("2023-07-03", 100.0), ("2023-10-02", 90.0)],
-                       "S": [("2023-07-03", 50.0), ("2023-11-01", 45.0)]})
-    buy, swap, later = pd.Timestamp("2023-08-01"), pd.Timestamp("2023-10-02"), pd.Timestamp("2023-11-01")
-    assert (later - swap).days == 30
-    targets = pd.DataFrame({"X": 1.0}, index=[buy, swap, later])
+                       "S": [("2023-07-03", 50.0)], "Y": [("2023-07-03", 10.0)]})
+    buy, swap, out, back = (pd.Timestamp(d) for d in ("2023-08-01", "2023-10-02", "2023-10-09", "2023-10-16"))
+    assert (back - swap).days < 31
+    targets = pd.DataFrame({"X": [0.5, 0.5, 0.0, 0.5], "Y": [0.5, 0.5, 1.0, 0.5]}, index=[buy, swap, out, back])
     spec = Spec(cash_yield_mode="fixed", cash_yield_fixed=0.0)
     pol = ExecutionPolicy(harvest=True, substitutes=(("X", "S"),))
     for taxed in (False, True):
         res = portfolio.simulate(md, targets, spec=spec, taxed=taxed, cost_model=ZeroCost(spec, override_file=None),
                                  initial=1_000_000.0, policy=pol)
-        assert res.harvests.loc[swap] == 1                         # the first swap happens
-        assert res.weights.loc[swap, "X"] == 0.0                   # and sells X out completely
-        assert res.weights.loc[swap, "S"] == pytest.approx(1.0)
-        assert not res.trades.loc[later].any()                     # the swap back is refused
-        assert res.harvests.loc[later] == 0
+        assert res.harvests.loc[swap] == 1                         # X is harvested into S
+        assert res.weights.loc[swap, "X"] == 0.0
+        assert res.weights.loc[out, "S"] == 0.0                    # the group is then sold out completely
+        assert res.trades.loc[back, "X"] == 0.0                    # and bought back through S, not X
+        assert res.trades.loc[back, "S"] > 0.0
         assert not [e for e in res.ledger.log if e["event"] == "wash_after"]
 
 
@@ -169,16 +173,26 @@ def test_participation_cap_scales_and_truncates_lot_plans():
 def test_harvesting_never_rebuys_inside_the_window_on_random_paths():
     """Invariant on realistic paths: under a harvesting policy the ledger never sees a rebuy within 30 days.
 
-    On this seed the planner without the ledger's loss-sale memory rebuys twice inside the window.
+    Month-to-month targets that sometimes drop a fund to zero empty a harvested group and buy it again, which
+    is where the no-rebuy window decides. On this seed the planner without the ledger's loss-sale memory
+    rebuys inside the window five times, before and after tax.
     """
-    from vaneck.baselines import equal_weight
+    import numpy as np
+
     from vaneck.calendar import walk_forward_splits
     from vaneck.data import make_synthetic
-    md = make_synthetic(n_days=1500, seed=3, daily_vol=0.02)
+    md = make_synthetic(n_days=1500, seed=2, daily_vol=0.02)
     pairs = (("SMH", "MOAT"), ("GDX", "ANGL"), ("REMX", "FLTR"), ("HAP", "PFXF"))
-    splits = walk_forward_splits(md.index, md.index[0], md.index[-1])
-    targets = portfolio.build_targets(md, splits, equal_weight, [a for a, _ in pairs])
-    pol = ExecutionPolicy(band=0.20, harvest=True, lot_method="TAXOPT", substitutes=pairs)
+    funds = [a for a, _ in pairs]
+    rng = np.random.default_rng(2)
+    rows = {}
+    for sp in walk_forward_splits(md.index, md.index[0], md.index[-1]):
+        w = rng.uniform(0.1, 1.0, len(funds)) * (rng.uniform(size=len(funds)) > 0.35)
+        if w.sum() == 0:
+            w[0] = 1.0
+        rows[sp.exec_date] = dict(zip(funds, w / w.sum() * 0.98))
+    targets = pd.DataFrame(rows).T.sort_index()
+    pol = ExecutionPolicy(harvest=True, lot_method="TAXOPT", substitutes=pairs)
     for taxed in (False, True):
         res = portfolio.simulate(md, targets, taxed=taxed, policy=pol)
         assert res.harvests.sum() >= 10                              # the policy is active on these paths

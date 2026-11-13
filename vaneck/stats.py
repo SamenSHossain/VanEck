@@ -117,7 +117,7 @@ def newey_west_se(d: np.ndarray, lags: int | None = None) -> tuple[float, int]:
     d = np.asarray(d, dtype=float)
     n = len(d)
     if lags is None:
-        lags = int(np.floor(0.75 * n ** (1.0 / 3.0)))
+        lags = int(np.floor(0.75 * np.cbrt(n)))         # cbrt is exact for perfect cubes; n ** (1/3) is not
     e = d - d.mean()
     s = float(e @ e) / n
     for j in range(1, lags + 1):

@@ -13,3 +13,5 @@ def test_design_report_runs_on_synthetic(synth):
     assert rep["rw6"].shape[0] == 6 and rep["rw12"].shape[0] == 12
     assert rep["power"]["mde_monthly_bonferroni_x12"].astype(float).gt(0).all()
     assert rep["hac"]["p_hac_one_sided"].astype(float).between(0, 1).all()
+    # SPEC section 15: N = 6 trials for the primary family and 12 with the diagnostics
+    assert set(rep["dsr6"]["n_trials"]) == {6} and set(rep["dsr12"]["n_trials"]) == {12}

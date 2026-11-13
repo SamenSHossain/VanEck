@@ -14,11 +14,12 @@ def test_synthetic_data_is_healthy(synth):
 
 def test_nan_and_staleness_block(synth):
     md = synth
+    saved = md.adj_close.iloc[-1, 0]
     md.adj_close.iloc[-1, 0] = np.nan
     rep = check_market_data(md, now=md.index[-1] + pd.Timedelta(days=1))
     assert rep.blocked
     assert {c.name for c in rep.checks if c.status == "block"} >= {"last_bar_alignment", "recent_nans"}
-    md.adj_close.iloc[-1, 0] = md.adj_close.iloc[-2, 0]  # restore for other tests
+    md.adj_close.iloc[-1, 0] = saved  # restore the exact value for other tests
     rep2 = check_market_data(md, now=md.index[-1] + pd.Timedelta(days=30))
     assert any(c.name == "bar_staleness_days" and c.status == "block" for c in rep2.checks)
 
